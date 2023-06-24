@@ -1,8 +1,6 @@
 import ballerina/http;
 
-# Provides a set of configurations for controlling the behaviours when communicating with a remote HTTP endpoint.
-@display {label: "Connection Config"}
-public type ConnectionConfig record {|
+type ConnectionConfig record {|
     # Configurations related to client authentication
     http:BearerTokenConfig|OAuth2RefreshTokenGrantConfig auth;
     # The HTTP version understood by the client
@@ -2832,3 +2830,108 @@ public type DataLabel record {
     # The type of the data label.
     "DATA_LABEL_TYPE_UNSPECIFIED"|"NONE"|"DATA"|"CUSTOM" 'type?;
 };
+
+// New types
+type RenderOptions "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA";
+
+// Types copied from all API
+# File information
+#
+# + kind - Identifies what kind of resource is this. Value: the fixed string "drive#file".   
+# + id - The Id of the file
+# + name - The name of the file
+# + mimeType - The MIME type of the file
+@display {label: "File"}
+public type File record {
+    @display {label: "Kind"}
+    string kind;
+    @display {label: "Id"}
+    string id;
+    @display {label: "Name"}
+    string name;
+    @display {label: "Mime Type"}
+    string mimeType;
+};
+
+# Single cell or a group of adjacent cells in a sheet.
+#
+# + a1Notation - The column letter followed by the row number.
+# For example for a single cell "A1" refers to the intersection of column "A" with row "1",
+# and for a range of cells "A1:D5" refers to the top left cell and the bottom right cell of a range
+# + values - Values of the given range
+@display {label: "Range"}
+public type Range record {
+    @display {label: "A1 Notation"}
+    string a1Notation;
+    @display {label: "Values"}
+    (int|string|decimal)[][] values;
+};
+
+public type Column record {
+    @display {label: "Column Letter"}
+    string columnPosition;
+    @display {label: "Values"}
+    (int|string|decimal)[] values;
+};
+
+public type Row record {
+    @display {label: "Row Number"}
+    int rowPosition;
+    @display {label: "Values"}
+    (int|string|decimal)[] values;
+};
+
+public type Cell record {
+    @display {label: "A1 Notation"}
+    string a1Notation;
+    @display {label: "Value"}
+    (int|string|decimal) value;
+};
+
+public type A1Range record {
+    @display {label: "Sheet Name"}
+    string sheetName;
+    @display {label: "Start Index"}
+    string startIndex?;
+    @display {label: "End Index"}
+    string endIndex?;
+};
+
+public type FilesResponse record {
+    @display {label: "Kind"}
+    string kind;
+    @display {label: "Next Page Token"}
+    string nextPageToken?;
+    @display {label: "Incomplete Search"}
+    boolean incompleteSearch;
+    @display {label: "Array of Files"}
+    File[] files;
+};
+
+public enum Visibility {
+    UNSPECIFIED_VISIBILITY = "DEVELOPER_METADATA_VISIBILITY_UNSPECIFIED",
+    DOCUMENT = "DOCUMENT",
+    PROJECT = "PROJECT"
+};
+
+// Conversion functoins
+
+isolated function toCell(BatchGetValuesResponse res) returns Cell {
+    panic error("not implemented");
+}
+
+isolated function toRow(BatchGetValuesResponse res) returns Row {
+    panic error("not implemented");
+}
+
+isolated function toColumn(BatchGetValuesResponse res) returns Column {
+    panic error("not implemented");
+}
+
+isolated function toRange(ValueRange valueRange) returns Range {
+    return {values: <(int|string|decimal)[][]>valueRange.values, a1Notation: <string>valueRange.range};
+}
+
+isolated function toValueRange(Range range) returns ValueRange {
+    return {range: range.a1Notation, values: range.values};
+}

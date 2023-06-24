@@ -15,11 +15,11 @@ function test() {
             refreshToken
         }
     };
-    Client c = checkpanic new (config);
+    GsheetClient c = checkpanic new (config);
     Spreadsheet props = {
         properties: {
             title: "Deleted me"
         }
     };
-    Spreadsheet _ = checkpanic c->sheetsSpreadsheetsCreate(props);
+    Spreadsheet _ = checkpanic c->createSpreadsheet(props);
 }
