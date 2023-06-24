@@ -1,0 +1,56 @@
+#+title: Diff
+| Old                         | New                                             |
+|-----------------------------+-------------------------------------------------|
+| createSpreadSheet           | sheetsSpreadsheetsCreate                        |
+| openSpreadsheetById         | sheetsSpreadsheetsGet                           |
+| openSpreadsheetByUrl        |                                                 |
+| getAllSpreadsheets          |                                                 |
+| renameSpreadsheet           |                                                 |
+| getSheets                   |                                                 |
+| getSheetByName              |                                                 |
+| addSheet                    |                                                 |
+| removeSheet                 |                                                 |
+| removeSheetByName           |                                                 |
+| renameSheet                 |                                                 |
+| setRange                    | sheetsSpreadsheetsValuesUpdate                  |
+| getRange                    | sheetsSpreadsheetsValuesGet                     |
+| clearRange                  | sheetsSpreadsheetsValuesClear                   |
+| addColumnsBefore            |                                                 |
+| addColumnsBeforeBySheetName |                                                 |
+| addColumnsAfter             |                                                 |
+| addColumnsAfterBySheetName  |                                                 |
+| createOrUpdateColumn        |                                                 |
+| getColumn                   |                                                 |
+| deleteColumns               |                                                 |
+| deleteColumnsBySheetName    |                                                 |
+| addRowsBefore               |                                                 |
+| addRowsBeforeBySheetName    |                                                 |
+| addRowsAfter                | sheetsSpreadsheetsValuesAppend                  |
+| addRowsAfterBySheetName     |                                                 |
+| createOrUpdateRow           |                                                 |
+| getRow                      |                                                 |
+| deleteRows                  |                                                 |
+| deleteRowsBySheetName       |                                                 |
+| setCell                     |                                                 |
+| getCell                     |                                                 |
+| clearCell                   |                                                 |
+| appendRowToSheet            |                                                 |
+| appendValue                 |                                                 |
+| copyTo                      | sheetsSpreadsheetsSheetsCopyto                  |
+| copyToBySheetName           |                                                 |
+| clearAll                    |                                                 |
+| clearAllBySheetName         |                                                 |
+| setRowMetaData              |                                                 |
+| getRowByDataFilter          | sheetsSpreadsheetsValuesBatchgetbydatafilter    |
+| updateRowByDataFilter       | sheetsSpreadsheetsValuesBatchupdatebydatafilter |
+| deleteRowByDataFilter       |                                                 |
+
+* Unmatched new
++ sheetsSpreadsheetsDevelopermetadataGet
++ sheetsSpreadsheetsDevelopermetadataSearch
++ sheetsSpreadsheetsValuesBatchclear
++ sheetsSpreadsheetsValuesBatchclearbydatafilter
++ sheetsSpreadsheetsValuesBatchget
++ sheetsSpreadsheetsValuesBatchupdate
++ sheetsSpreadsheetsBatchupdate
++ sheetsSpreadsheetsGetbydatafilter
