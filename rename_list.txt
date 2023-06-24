@@ -1,0 +1,5 @@
+sheetsSpreadsheetsCreate createSpreadsheet
+sheetsSpreadsheetsGet openSpreadsheetById
+sheetsSpreadsheetsValuesUpdate setRange
+sheetsSpreadsheetsValuesGet getRange
+sheetsSpreadsheetsSheetsCopyto copyTo

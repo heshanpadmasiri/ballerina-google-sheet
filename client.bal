@@ -49,7 +49,7 @@ public isolated client class Client {
     # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsCreate(Spreadsheet payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns Spreadsheet|error {
+    remote isolated function createSpreadsheet(Spreadsheet payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns Spreadsheet|error {
         string resourcePath = string `/v4/spreadsheets`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -76,7 +76,7 @@ public isolated client class Client {
     # + includeGridData - True if grid data should be returned. This parameter is ignored if a field mask was set in the request.
     # + ranges - The ranges to retrieve from the spreadsheet.
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsGet(string spreadsheetId, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeGridData = (), string[]? ranges = ()) returns Spreadsheet|error {
+    remote isolated function openSpreadsheetById(string spreadsheetId, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeGridData = (), string[]? ranges = ()) returns Spreadsheet|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType, "includeGridData": includeGridData, "ranges": ranges};
         map<Encoding> queryParamEncoding = {"ranges": {style: FORM, explode: true}};
@@ -100,7 +100,7 @@ public isolated client class Client {
     # + spreadsheetId - The ID of the spreadsheet to retrieve metadata from.
     # + metadataId - The ID of the developer metadata to retrieve.
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsDevelopermetadataGet(string spreadsheetId, int metadataId, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns DeveloperMetadata|error {
+    remote isolated function getDevelopermetadata(string spreadsheetId, int metadataId, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns DeveloperMetadata|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/developerMetadata/${getEncodedUri(metadataId)}`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -122,7 +122,7 @@ public isolated client class Client {
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + spreadsheetId - The ID of the spreadsheet to retrieve metadata from.
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsDevelopermetadataSearch(string spreadsheetId, SearchDeveloperMetadataRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns SearchDeveloperMetadataResponse|error {
+    remote isolated function searchDevelopermetadata(string spreadsheetId, SearchDeveloperMetadataRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns SearchDeveloperMetadataResponse|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/developerMetadata:search`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -148,7 +148,7 @@ public isolated client class Client {
     # + spreadsheetId - The ID of the spreadsheet containing the sheet to copy.
     # + sheetId - The ID of the sheet to copy.
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsSheetsCopyto(string spreadsheetId, int sheetId, CopySheetToAnotherSpreadsheetRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns SheetProperties|error {
+    remote isolated function copyTo(string spreadsheetId, int sheetId, CopySheetToAnotherSpreadsheetRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns SheetProperties|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/sheets/${getEncodedUri(sheetId)}:copyTo`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -177,7 +177,7 @@ public isolated client class Client {
     # + majorDimension - The major dimension that results should use. For example, if the spreadsheet data in Sheet1 is: `A1=1,B1=2,A2=3,B2=4`, then requesting `range=Sheet1!A1:B2?majorDimension=ROWS` returns `[[1,2],[3,4]]`, whereas requesting `range=Sheet1!A1:B2?majorDimension=COLUMNS` returns `[[1,3],[2,4]]`.
     # + valueRenderOption - How values should be represented in the output. The default render option is FORMATTED_VALUE.
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsValuesGet(string spreadsheetId, string range, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? dateTimeRenderOption = (), "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS"? majorDimension = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? valueRenderOption = ()) returns ValueRange|error {
+    remote isolated function getRange(string spreadsheetId, string range, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? dateTimeRenderOption = (), "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS"? majorDimension = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? valueRenderOption = ()) returns ValueRange|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/values/${getEncodedUri(range)}`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType, "dateTimeRenderOption": dateTimeRenderOption, "majorDimension": majorDimension, "valueRenderOption": valueRenderOption};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -204,7 +204,7 @@ public isolated client class Client {
     # + responseValueRenderOption - Determines how values in the response should be rendered. The default render option is FORMATTED_VALUE.
     # + valueInputOption - How the input data should be interpreted.
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsValuesUpdate(string spreadsheetId, string range, ValueRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns UpdateValuesResponse|error {
+    remote isolated function setRange(string spreadsheetId, string range, ValueRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns UpdateValuesResponse|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/values/${getEncodedUri(range)}`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType, "includeValuesInResponse": includeValuesInResponse, "responseDateTimeRenderOption": responseDateTimeRenderOption, "responseValueRenderOption": responseValueRenderOption, "valueInputOption": valueInputOption};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -235,7 +235,7 @@ public isolated client class Client {
     # + responseValueRenderOption - Determines how values in the response should be rendered. The default render option is FORMATTED_VALUE.
     # + valueInputOption - How the input data should be interpreted.
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsValuesAppend(string spreadsheetId, string range, ValueRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "OVERWRITE"|"INSERT_ROWS"? insertDataOption = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns AppendValuesResponse|error {
+    remote isolated function appendValues(string spreadsheetId, string range, ValueRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "OVERWRITE"|"INSERT_ROWS"? insertDataOption = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns AppendValuesResponse|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/values/${getEncodedUri(range)}:append`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType, "includeValuesInResponse": includeValuesInResponse, "insertDataOption": insertDataOption, "responseDateTimeRenderOption": responseDateTimeRenderOption, "responseValueRenderOption": responseValueRenderOption, "valueInputOption": valueInputOption};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -261,7 +261,7 @@ public isolated client class Client {
     # + spreadsheetId - The ID of the spreadsheet to update.
     # + range - The [A1 notation or R1C1 notation](/sheets/api/guides/concepts#cell) of the values to clear.
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsValuesClear(string spreadsheetId, string range, ClearValuesRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns ClearValuesResponse|error {
+    remote isolated function clearValues(string spreadsheetId, string range, ClearValuesRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns ClearValuesResponse|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/values/${getEncodedUri(range)}:clear`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -286,7 +286,7 @@ public isolated client class Client {
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + spreadsheetId - The ID of the spreadsheet to update.
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsValuesBatchclear(string spreadsheetId, BatchClearValuesRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchClearValuesResponse|error {
+    remote isolated function batchclearValues(string spreadsheetId, BatchClearValuesRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchClearValuesResponse|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/values:batchClear`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -311,7 +311,7 @@ public isolated client class Client {
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + spreadsheetId - The ID of the spreadsheet to update.
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsValuesBatchclearbydatafilter(string spreadsheetId, BatchClearValuesByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchClearValuesByDataFilterResponse|error {
+    remote isolated function batchclearbydatafilterValues(string spreadsheetId, BatchClearValuesByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchClearValuesByDataFilterResponse|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/values:batchClearByDataFilter`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -340,7 +340,7 @@ public isolated client class Client {
     # + ranges - The [A1 notation or R1C1 notation](/sheets/api/guides/concepts#cell) of the range to retrieve values from.
     # + valueRenderOption - How values should be represented in the output. The default render option is ValueRenderOption.FORMATTED_VALUE.
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsValuesBatchget(string spreadsheetId, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? dateTimeRenderOption = (), "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS"? majorDimension = (), string[]? ranges = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? valueRenderOption = ()) returns BatchGetValuesResponse|error {
+    remote isolated function batchgetValues(string spreadsheetId, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? dateTimeRenderOption = (), "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS"? majorDimension = (), string[]? ranges = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? valueRenderOption = ()) returns BatchGetValuesResponse|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/values:batchGet`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType, "dateTimeRenderOption": dateTimeRenderOption, "majorDimension": majorDimension, "ranges": ranges, "valueRenderOption": valueRenderOption};
         map<Encoding> queryParamEncoding = {"ranges": {style: FORM, explode: true}};
@@ -363,7 +363,7 @@ public isolated client class Client {
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + spreadsheetId - The ID of the spreadsheet to retrieve data from.
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsValuesBatchgetbydatafilter(string spreadsheetId, BatchGetValuesByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchGetValuesByDataFilterResponse|error {
+    remote isolated function batchgetbydatafilterValues(string spreadsheetId, BatchGetValuesByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchGetValuesByDataFilterResponse|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/values:batchGetByDataFilter`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -388,7 +388,7 @@ public isolated client class Client {
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + spreadsheetId - The ID of the spreadsheet to update.
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsValuesBatchupdate(string spreadsheetId, BatchUpdateValuesRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchUpdateValuesResponse|error {
+    remote isolated function batchupdateValues(string spreadsheetId, BatchUpdateValuesRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchUpdateValuesResponse|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/values:batchUpdate`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -413,7 +413,7 @@ public isolated client class Client {
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + spreadsheetId - The ID of the spreadsheet to update.
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsValuesBatchupdatebydatafilter(string spreadsheetId, BatchUpdateValuesByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchUpdateValuesByDataFilterResponse|error {
+    remote isolated function batchupdatebydatafilterValues(string spreadsheetId, BatchUpdateValuesByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchUpdateValuesByDataFilterResponse|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/values:batchUpdateByDataFilter`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -438,7 +438,7 @@ public isolated client class Client {
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + spreadsheetId - The spreadsheet to apply the updates to.
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsBatchupdate(string spreadsheetId, BatchUpdateSpreadsheetRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchUpdateSpreadsheetResponse|error {
+    remote isolated function Batchupdate(string spreadsheetId, BatchUpdateSpreadsheetRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchUpdateSpreadsheetResponse|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}:batchUpdate`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -463,7 +463,7 @@ public isolated client class Client {
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + spreadsheetId - The spreadsheet to request.
     # + return - Successful response 
-    remote isolated function sheetsSpreadsheetsGetbydatafilter(string spreadsheetId, GetSpreadsheetByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns Spreadsheet|error {
+    remote isolated function Getbydatafilter(string spreadsheetId, GetSpreadsheetByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns Spreadsheet|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}:getByDataFilter`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
