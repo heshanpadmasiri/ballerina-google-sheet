@@ -1,7 +1,7 @@
 import argparse
 from typing import Dict, Optional, Tuple, List
 
-HardcodedNameList = Dict[str, str]
+NameList = Dict[str, str]
 
 LinePosition = Tuple[int, int]  # start_col, end_col
 # function_name_position, function_name
@@ -11,12 +11,12 @@ ParseResult = Optional[ResourceFunction]
 
 def rename_client(
         client_path: str,
-        hardcoded_name_list: HardcodedNameList,
+        name_list: NameList,
         inplace: bool) -> None:
     body = []
     with open(client_path, "r") as client_file:
         lines = client_file.readlines()
-        body = new_client_content(lines, hardcoded_name_list)
+        body = new_client_content(lines, name_list)
     new_client_path = client_path if inplace else "new_client.bal"
     with open(new_client_path, "w") as client_file:
         client_file.writelines(body)
@@ -24,13 +24,13 @@ def rename_client(
 
 def new_client_content(
         lines: List[str],
-        hardcoded_name_list: HardcodedNameList) -> List[str]:
+        name_list: NameList) -> List[str]:
     new_client_body = []
     for line in lines:
         parse_result = parse_line(line)
         if parse_result is not None:
             function_name_position, function_name = parse_result
-            new_function_name = hardcoded_name_list.get(
+            new_function_name = name_list.get(
                 function_name, generic_new_name(function_name))
             new_client_body.append(line[:function_name_position[0]] +
                                    new_function_name +
@@ -55,7 +55,6 @@ def generic_new_name(old_name: str) -> str:
             return name[i:].lower() + name[:i]
     return name
 
-
 def parse_line(line: str) -> ParseResult:
     tokens = line.strip().split()
     if len(
@@ -67,13 +66,16 @@ def parse_line(line: str) -> ParseResult:
     return None
 
 
-def read_name_list(name_list_path: str) -> HardcodedNameList:
-    replacement_names = {}
+def read_name_list(name_list_path: str) -> NameList:
+    name_list = {}
     with open(name_list_path, "r") as f:
         for line in f.readlines():
+            line = line.strip()
+            if len(line) == 0 or line[0] == "#":
+                continue
             org_name, new_name = line.split()
-            replacement_names[org_name] = new_name
-    return replacement_names
+            name_list[org_name] = new_name
+    return name_list
 
 
 if __name__ == "__main__":
