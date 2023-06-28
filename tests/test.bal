@@ -770,8 +770,7 @@ function testGetRowFromSheetWithFilterAfterDelete() returns error? {
     Sheet sheet = check spreadsheetClient->getSheetByName(spreadsheetId, testSheetName);
     ValueRange[]|error rowResp = spreadsheetClient->getRowByDataFilter(spreadsheetId, <int>sheet.properties?.sheetId, <A1Range>{sheetName: testSheetName, startIndex: "A3", endIndex: "C3"});
     if rowResp !is error {
-        // FIXME:
-        // test:assertEquals(rowResp, <ValueRange[]>[], msg = "Fetching of Data using A1Range filter failed");
+        test:assertEquals(rowResp, <ValueRange[]>[], msg = "Fetching of Data using A1Range filter failed");
     } else {
         test:assertFail(rowResp.message());
     }
@@ -779,15 +778,13 @@ function testGetRowFromSheetWithFilterAfterDelete() returns error? {
     DeveloperMetadataLookupFilter developerMetadataLookupFilter = {locationType: "ROW", metadataKey: "metadataKey", metadataValue: "value1"};
     rowResp = spreadsheetClient->getRowByDataFilter(spreadsheetId, <int>sheet.properties?.sheetId, gridRangeFilter);
     if rowResp !is error {
-        // FIXME:
-        // test:assertEquals(rowResp, <ValueRange[]>[], msg = "Fetching of Data using GridRangeFilter failed");
+        test:assertEquals(rowResp, <ValueRange[]>[], msg = "Fetching of Data using GridRangeFilter failed");
     } else {
         test:assertFail(rowResp.message());
     }
     rowResp = spreadsheetClient->getRowByDataFilter(spreadsheetId, <int>sheet.properties?.sheetId, developerMetadataLookupFilter);
     if rowResp !is error {
-        // FIXME:
-        // test:assertEquals(rowResp, <ValueRange[]>[], msg = "Fetching of Data using DeveloperMetadataLookupFilter failed");
+        test:assertEquals(rowResp, <ValueRange[]>[], msg = "Fetching of Data using DeveloperMetadataLookupFilter failed");
     } else {
         test:assertFail(rowResp.message());
     }

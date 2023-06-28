@@ -1,5 +1,4 @@
 import ballerina/http;
-import ballerina/io;
 
 public isolated client class Client {
     private final GsheetClient gClient;
@@ -130,7 +129,7 @@ public isolated client class Client {
             @display {label: "Worksheet Name"} string sheetName,
             Range range, @display {label: "Value Input Option"} string? valueInputOption = ())
                                     returns @tainted error? {
-        ValueRange payload = toValueRange(range);
+        GsheetValueRange payload = inToGsheetValueRange(range);
         // FIXME: Maybe we need to add the sheet id to this as well?
         string rangeRep = range.a1Notation;
         UpdateValuesResponse _ = check self.gClient->setRange(spreadsheetId, rangeRep, payload, valueInputOption="RAW");
@@ -140,11 +139,11 @@ public isolated client class Client {
             @display {label: "Range A1 Notation"} string a1Notation,
             @display {label: "Value Render Option"} RenderOptions? valueRenderOption = ())
                                     returns @tainted Range|error {
-        ValueRange? valueRange = check self.gClient->getRange(spreadsheetId, a1Notation, valueRenderOption = valueRenderOption);
+        GsheetValueRange? valueRange = check self.gClient->getRange(spreadsheetId, a1Notation, valueRenderOption = valueRenderOption);
         if valueRange == () {
             return error("empty value range");
         }
-        return toRange(valueRange);
+        return intoRange(valueRange);
     }
     remote isolated function clearRange(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet Name"} string sheetName,
@@ -205,7 +204,7 @@ public isolated client class Client {
                                         returns @tainted Column|error {
         string notation = sheetName + "!" + column + ":" + column;
         Range res = check self->getRange(spreadsheetId, sheetName, notation);
-        return toColumn(res);
+        return intoColumn(res);
     }
     remote isolated function deleteColumns(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet ID"} int sheetId,
@@ -275,7 +274,7 @@ public isolated client class Client {
                                     returns @tainted Row|error {
         string a1Notation = sheetName + "!" + row.toString() + ":" + row.toString();
         Range res = check self->getRange(spreadsheetId, sheetName, a1Notation);
-        return toRow(res);
+        return intoRow(res);
     }
     remote isolated function deleteRows(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet ID"} int sheetId,
@@ -309,7 +308,7 @@ public isolated client class Client {
             @display {label: "Value Render Option"} string? valueRenderOption = ())
                                     returns @tainted Cell|error {
         BatchGetValuesResponse res = check self.gClient->batchGetValues(spreadsheetId, ranges = [sheetName + "!" + a1Notation]);
-        return toCell(res);
+        return intoCell(res);
     }
     remote isolated function clearCell(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet name"} string sheetName,
@@ -323,9 +322,12 @@ public isolated client class Client {
             @display {label: "Value Input Option"} string? valueInputOption = ())
                                         returns error|ValueRange {
         string range = check getA1RangeString(a1Range);
-        io:println("range: " + range);
-        ValueRange payload =  {range, majorDimension: "ROWS", values: [values]};
-        return self.gClient->appendValues(spreadsheetId, range, payload, valueInputOption="RAW");
+        GsheetValueRange payload =  {range, majorDimension: "ROWS", values: [values]};
+        // FIXME: why the hell this is assignable to GsheetValueRange directly (JBUG?)
+        AppendValuesResponse res = check self.gClient->appendValues(spreadsheetId, range, payload, includeValuesInResponse = true, valueInputOption="RAW");
+        // FIXME: also why res.updates assignable to GsheetValueRange directly (JBUG?)
+        GsheetValueRange? valueRange = res.updates?.updatedData;
+        return valueRange != () ? intoValueRange(valueRange) : error("Error appending values");
     }
     remote isolated function copyTo(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet ID"} int sheetId,
@@ -381,14 +383,16 @@ public isolated client class Client {
                                                 @display {label: "Worksheet ID"} int sheetId,
                                                 @display {label: "Filter"} Filter filter)
                                                 returns error|ValueRange[] {
-        DataFilter dataFilter = toDataFilter(filter);
+        DataFilter dataFilter = intoDataFilter(filter);
         BatchGetValuesByDataFilterRequest request = {dataFilters: [dataFilter], majorDimension:"ROWS"};
         BatchGetValuesResponse res = check self.gClient->batchGetValuesByDataFilter(spreadsheetId, request);
-        if res.valueRanges == () {
+        GsheetValueRange[]? valueRanges = res.valueRanges;
+        if valueRanges == () {
             // FIXME: not sure why this is the expected behavior
             return [];
         }
-        return <ValueRange[]>res.valueRanges;
+        ValueRange?[] vals = from var each in valueRanges select tryIntoValueRange(each);
+        return from var each in vals where each != () select each;
     }
 
     remote isolated function updateRowByDataFilter(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -398,7 +402,7 @@ public isolated client class Client {
                                                    @display {label: "Value Input Option"} string valueInputOption)
                                                    returns error? {
                                                        // batchUpdateValuesByDataFilter
-        DataFilter dataFilter = toDataFilter(filter);
+        DataFilter dataFilter = intoDataFilter(filter);
         DataFilterValueRange filterRange = { dataFilter, values:[values], majorDimension: "ROWS"};
         BatchUpdateValuesByDataFilterRequest request = {data: [filterRange], 
                                                 includeValuesInResponse: false, 
@@ -409,7 +413,7 @@ public isolated client class Client {
                                                   @display {label: "Worksheet ID"} int sheetId,
                                                   @display {label: "Filter"} Filter filter)
                                                   returns error? {
-        DataFilter dataFilter = toDataFilter(filter);
+        DataFilter dataFilter = intoDataFilter(filter);
         DataFilterValueRange filterRange = { dataFilter, values:[], majorDimension: "ROWS"};
         BatchUpdateValuesByDataFilterRequest request = {data: [filterRange], 
                                                 includeValuesInResponse: false, valueInputOption: "RAW"};
@@ -614,11 +618,11 @@ class GsheetClient {
     # + majorDimension - The major dimension that results should use. For example, if the spreadsheet data in Sheet1 is: `A1=1,B1=2,A2=3,B2=4`, then requesting `range=Sheet1!A1:B2?majorDimension=ROWS` returns `[[1,2],[3,4]]`, whereas requesting `range=Sheet1!A1:B2?majorDimension=COLUMNS` returns `[[1,3],[2,4]]`.
     # + valueRenderOption - How values should be represented in the output. The default render option is FORMATTED_VALUE.
     # + return - Successful response 
-    remote isolated function getRange(string spreadsheetId, string range, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? dateTimeRenderOption = (), "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS"? majorDimension = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? valueRenderOption = ()) returns ValueRange|error {
+    remote isolated function getRange(string spreadsheetId, string range, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? dateTimeRenderOption = (), "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS"? majorDimension = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? valueRenderOption = ()) returns GsheetValueRange|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/values/${getEncodedUri(range)}`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType, "dateTimeRenderOption": dateTimeRenderOption, "majorDimension": majorDimension, "valueRenderOption": valueRenderOption};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
-        ValueRange response = check self.clientEp->get(resourcePath);
+        GsheetValueRange response = check self.clientEp->get(resourcePath);
         return response;
     }
     # Sets values in a range of a spreadsheet. The caller must specify the spreadsheet ID, range, and a valueInputOption.
@@ -642,7 +646,7 @@ class GsheetClient {
     # + valueInputOption - How the input data should be interpreted.
     # + return - Successful response 
     // FIXME: valueInputOption is required
-    remote isolated function setRange(string spreadsheetId, string range, ValueRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns UpdateValuesResponse|error {
+    remote isolated function setRange(string spreadsheetId, string range, GsheetValueRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns UpdateValuesResponse|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/values/${getEncodedUri(range)}`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType, "includeValuesInResponse": includeValuesInResponse, "responseDateTimeRenderOption": responseDateTimeRenderOption, "responseValueRenderOption": responseValueRenderOption, "valueInputOption": valueInputOption};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -674,7 +678,7 @@ class GsheetClient {
     # + valueInputOption - How the input data should be interpreted.
     # + return - Successful response 
     // NOTE: valueInputOption is required
-    remote isolated function appendValues(string spreadsheetId, string range, ValueRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "OVERWRITE"|"INSERT_ROWS"? insertDataOption = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns AppendValuesResponse|error {
+    remote isolated function appendValues(string spreadsheetId, string range, GsheetValueRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "OVERWRITE"|"INSERT_ROWS"? insertDataOption = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns AppendValuesResponse|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/values/${getEncodedUri(range)}:append`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType, "includeValuesInResponse": includeValuesInResponse, "insertDataOption": insertDataOption, "responseDateTimeRenderOption": responseDateTimeRenderOption, "responseValueRenderOption": responseValueRenderOption, "valueInputOption": valueInputOption};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);

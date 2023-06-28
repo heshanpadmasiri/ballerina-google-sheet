@@ -1,5 +1,4 @@
 import ballerina/http;
-import ballerina/io;
 
 public type ConnectionConfig record {|
     # Configurations related to client authentication
@@ -247,7 +246,7 @@ public type UpdateValuesByDataFilterResponse record {
     # The number of columns where at least one cell in the column was updated.
     int:Signed32 updatedColumns?;
     # Data within a range of the spreadsheet.
-    ValueRange updatedData?;
+    GsheetValueRange updatedData?;
     # The range (in [A1 notation](/sheets/api/guides/concepts#cell)) that updates were applied to.
     string updatedRange?;
     # The number of rows where at least one cell in the row was updated.
@@ -1809,7 +1808,7 @@ public type MatchedValueRange record {
     # The DataFilters from the request that matched the range of values.
     DataFilter[] dataFilters?;
     # Data within a range of the spreadsheet.
-    ValueRange valueRange?;
+    GsheetValueRange valueRange?;
 };
 
 # Adds a new conditional format rule at the given index. All subsequent rules' indexes are incremented.
@@ -2098,7 +2097,7 @@ public type BatchGetValuesResponse record {
     # The ID of the spreadsheet the data was retrieved from.
     string spreadsheetId?;
     # The requested values. The order of the ValueRanges is the same as the order of the requested ranges.
-    ValueRange[] valueRanges?;
+    GsheetValueRange[] valueRanges?;
 };
 
 # Properties of a sheet.
@@ -2262,7 +2261,7 @@ public type PivotTable record {
 };
 
 # Data within a range of the spreadsheet.
-public type ValueRange record {
+public type GsheetValueRange record {
     # The major dimension of the values. For output, if the spreadsheet data is: `A1=1,B1=2,A2=3,B2=4`, then requesting `range=A1:B2,majorDimension=ROWS` will return `[[1,2],[3,4]]`, whereas requesting `range=A1:B2,majorDimension=COLUMNS` will return `[[1,3],[2,4]]`. For input, with `range=A1:B2,majorDimension=ROWS` then `[[1,2],[3,4]]` will set `A1=1,B1=2,A2=3,B2=4`. With `range=A1:B2,majorDimension=COLUMNS` then `[[1,2],[3,4]]` will set `A1=1,B1=3,A2=2,B2=4`. When writing, if this field is not set, it defaults to ROWS.
     "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS" majorDimension?;
     # The range the values cover, in [A1 notation](/sheets/api/guides/concepts#cell). For output, this range indicates the entire requested range, even though the values will exclude trailing rows and columns. When appending values, this field represents the range to search for a table, after which values will be appended.
@@ -2758,7 +2757,7 @@ public type AddChartResponse record {
 # The request for updating more than one range of values in a spreadsheet.
 public type BatchUpdateValuesRequest record {
     # The new values to apply to the spreadsheet.
-    ValueRange[] data?;
+    GsheetValueRange[] data?;
     # Determines if the update response should include the values of the cells that were updated. By default, responses do not include the updated values. The `updatedData` field within each of the BatchUpdateValuesResponse.responses contains the updated values. If the range to write was larger than the range actually written, the response includes all values in the requested range (excluding trailing empty rows and columns).
     boolean includeValuesInResponse?;
     # Determines how dates, times, and durations in the response should be rendered. This is ignored if response_value_render_option is FORMATTED_VALUE. The default dateTime render option is SERIAL_NUMBER.
@@ -2814,7 +2813,7 @@ public type UpdateValuesResponse record {
     # The number of columns where at least one cell in the column was updated.
     int:Signed32 updatedColumns?;
     # Data within a range of the spreadsheet.
-    ValueRange updatedData?;
+    GsheetValueRange updatedData?;
     # The range (in A1 notation) that updates were applied to.
     string updatedRange?;
     # The number of rows where at least one cell in the row was updated.
@@ -2836,6 +2835,14 @@ public type DataLabel record {
 // New types
 type RenderOptions "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA";
 
+public type ValueRange record {
+    @display {label: "Row Number"}
+    int rowPosition;
+    @display {label: "Values"}
+    (int|string|decimal|boolean|float)[] values;
+    @display {label: "A1 Range"}
+    A1Range a1Range;
+};
 // Types copied from all API
 # File information
 #
@@ -2970,8 +2977,8 @@ public enum LocationMatchingStrategy {
 
 // Conversion functoins
 
-isolated function toCell(BatchGetValuesResponse res) returns Cell {
-    ValueRange[]? valueRanges = res.valueRanges;
+isolated function intoCell(BatchGetValuesResponse res) returns Cell {
+    GsheetValueRange[]? valueRanges = res.valueRanges;
     if valueRanges == () {
         panic error("empty value range");
     }
@@ -2983,27 +2990,27 @@ isolated function toCell(BatchGetValuesResponse res) returns Cell {
         panic error("unexpected shape");
     }
     int|decimal|string value = checkpanic values[0][0].cloneWithType();
+    string a1Notation = <string>valueRanges[0].range;
     return {
-        // FIXME:
-        a1Notation: "UNKNOWN",
+        a1Notation,
         value
     };
 }
 
-isolated function toRow(Range range) returns Row {
+isolated function intoRow(Range range) returns Row {
     (int|string|decimal)[][] resVal = range.values;
     if resVal.length() != 1 {
         panic error("invalid row");
     }
     (int|string|decimal)[] values = resVal[0];
     return {
-        // FIXME:
+        // FIXME: parse the relevent part of range
         rowPosition: 0,
         values
     };
 }
 
-isolated function toColumn(Range range) returns Column {
+isolated function intoColumn(Range range) returns Column {
     (int|string|decimal)[][] resVal = range.values;
     (int|string|decimal)[] values = [];
     foreach var row in resVal {
@@ -3013,23 +3020,22 @@ isolated function toColumn(Range range) returns Column {
         values.push(row[0]);
     }
     return {
-        // FIXME:
+        // FIXME: parse the relevent part of range
         columnPosition: "UNKNOWN",
         values
     };
 }
 
-isolated function toRange(ValueRange valueRange) returns Range {
-    io:println("toRange: ", valueRange);
+isolated function intoRange(GsheetValueRange valueRange) returns Range {
     // NOTE: casting don't work here (probably JBUG)
     return {values: checkpanic valueRange.values.cloneWithType(), a1Notation: <string>valueRange.range};
 }
 
-isolated function toValueRange(Range range) returns ValueRange {
+isolated function inToGsheetValueRange(Range range) returns GsheetValueRange {
     return {range: range.a1Notation, values: range.values};
 }
 
-isolated function toDataFilter(Filter filter) returns DataFilter {
+isolated function intoDataFilter(Filter filter) returns DataFilter {
     if filter is A1Range {
         return {a1Range: checkpanic getA1RangeString(filter)};
     } else if filter is GridRangeFilter {
@@ -3037,4 +3043,29 @@ isolated function toDataFilter(Filter filter) returns DataFilter {
     } else {
         return {developerMetadataLookup: checkpanic filter.cloneWithType()};
     }
+}
+
+isolated function tryIntoValueRange(GsheetValueRange valueRange) returns ValueRange? {
+    if valueRange.values == () || valueRange.majorDimension == () || valueRange.range == () {
+        return ();
+    }
+    return intoValueRange(valueRange);
+}
+
+// FIXME: this shouldn't handle the cases where fields are empty (tryTo must handle them).
+// They are getting created by append functions, which seems sus
+isolated function intoValueRange(GsheetValueRange valueRange) returns ValueRange {
+    anydata[][] tmpValues = <anydata[][]>valueRange.values;
+    A1Range a1Range = intoA1Range(<string>valueRange.range);
+    (int|string|decimal|boolean|float)[] values = checkpanic tmpValues[0].cloneWithType();
+    return { rowPosition: -1, values, a1Range };
+}
+
+isolated function intoA1Range(string range) returns A1Range {
+    // FIXME:
+    return {
+        sheetName: "",
+        startIndex: "",
+        endIndex: ""
+    };
 }
