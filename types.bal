@@ -1,6 +1,7 @@
 import ballerina/http;
+import ballerina/io;
 
-type ConnectionConfig record {|
+public type ConnectionConfig record {|
     # Configurations related to client authentication
     http:BearerTokenConfig|OAuth2RefreshTokenGrantConfig auth;
     # The HTTP version understood by the client
@@ -1844,6 +1845,7 @@ public type BatchUpdateValuesByDataFilterRequest record {
     # Determines how values in the response should be rendered. The default render option is FORMATTED_VALUE.
     "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA" responseValueRenderOption?;
     # How the input data should be interpreted.
+    // NOTE: valueInputOption is required
     "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED" valueInputOption?;
 };
 
@@ -2914,24 +2916,125 @@ public enum Visibility {
     PROJECT = "PROJECT"
 };
 
+public type Filter A1Range|DeveloperMetadataLookupFilter|GridRangeFilter;
+public type GridRangeFilter record {
+    @display {label: "Worksheet ID"}
+    int sheetId;
+    @display {label: "Starting Row Index"}
+    int startRowIndex?;
+    @display {label: "Ending Row Index"}
+    int endRowIndex?;
+    @display {label: "Starting Column Index"}
+    int startColumnIndex?;
+    @display {label: "Ending Column Index"}
+    int endColumnIndex?;
+};
+public type DeveloperMetadataLookupFilter record {
+    @display {label: "Location Type"}
+    LocationType locationType;
+    @display {label: "Location matching strategy"}
+    LocationMatchingStrategy locationMatchingStrategy?;
+    @display {label: "Metadata Id"}
+    int metadataId?;
+    @display {label: "Metadata Key"}
+    string metadataKey?;
+    @display {label: "Metadata Value"}
+    string metadataValue;
+    @display {label: "Metadata Visibility"}
+    Visibility visibility?;
+    @display {label: "Metadata Location"}
+    MetadataLocation metadataLocation?;
+};
+public type MetadataLocation record {
+    @display {label: "Location Type"}
+    LocationType locationType;
+    @display {label: "Spreadsheet"}
+    boolean spreadsheet;
+    @display {label: "Worksheet ID"}
+    int sheetId;
+    @display {label: "Dimension Range"}
+    DimensionRange dimensionRange;
+};
+public enum LocationType {
+    UNSPECIFIED_LOCATION = "DEVELOPER_METADATA_LOCATION_TYPE_UNSPECIFIED",
+    COLUMN = "COLUMN",
+    SPREADSHEET = "SPREADSHEET",
+    SHEET = "SHEET",
+    ROW = "ROW"
+};
+public enum LocationMatchingStrategy {
+    UNSPECIFIED_STRATEGY = "DEVELOPER_METADATA_LOCATION_MATCHING_STRATEGY_UNSPECIFIED",
+    EXACT_LOCATION = "EXACT_LOCATION",
+    INTERSECTING_LOCATION = "INTERSECTING_LOCATION"
+};
+
 // Conversion functoins
 
 isolated function toCell(BatchGetValuesResponse res) returns Cell {
-    panic error("not implemented");
+    ValueRange[]? valueRanges = res.valueRanges;
+    if valueRanges == () {
+        panic error("empty value range");
+    }
+    if valueRanges.length() != 1 {
+        panic error("invalid value range");
+    }
+    anydata[][] values = <anydata[][]>valueRanges[0].values;
+    if values.length() != 1 || values[0].length() != 1 {
+        panic error("unexpected shape");
+    }
+    int|decimal|string value = checkpanic values[0][0].cloneWithType();
+    return {
+        // FIXME:
+        a1Notation: "UNKNOWN",
+        value
+    };
 }
 
-isolated function toRow(BatchGetValuesResponse res) returns Row {
-    panic error("not implemented");
+isolated function toRow(Range range) returns Row {
+    (int|string|decimal)[][] resVal = range.values;
+    if resVal.length() != 1 {
+        panic error("invalid row");
+    }
+    (int|string|decimal)[] values = resVal[0];
+    return {
+        // FIXME:
+        rowPosition: 0,
+        values
+    };
 }
 
-isolated function toColumn(BatchGetValuesResponse res) returns Column {
-    panic error("not implemented");
+isolated function toColumn(Range range) returns Column {
+    (int|string|decimal)[][] resVal = range.values;
+    (int|string|decimal)[] values = [];
+    foreach var row in resVal {
+        if row.length() != 1 {
+            panic error("invalid column");
+        }
+        values.push(row[0]);
+    }
+    return {
+        // FIXME:
+        columnPosition: "UNKNOWN",
+        values
+    };
 }
 
 isolated function toRange(ValueRange valueRange) returns Range {
-    return {values: <(int|string|decimal)[][]>valueRange.values, a1Notation: <string>valueRange.range};
+    io:println("toRange: ", valueRange);
+    // NOTE: casting don't work here (probably JBUG)
+    return {values: checkpanic valueRange.values.cloneWithType(), a1Notation: <string>valueRange.range};
 }
 
 isolated function toValueRange(Range range) returns ValueRange {
     return {range: range.a1Notation, values: range.values};
+}
+
+isolated function toDataFilter(Filter filter) returns DataFilter {
+    if filter is A1Range {
+        return {a1Range: checkpanic getA1RangeString(filter)};
+    } else if filter is GridRangeFilter {
+        return {gridRange: checkpanic filter.cloneWithType()};
+    } else {
+        return {developerMetadataLookup: checkpanic filter.cloneWithType()};
+    }
 }
