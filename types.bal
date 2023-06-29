@@ -1,3 +1,4 @@
+import ballerina/lang.regexp;
 import ballerina/http;
 
 public type ConnectionConfig record {|
@@ -3003,9 +3004,13 @@ isolated function intoRow(Range range) returns Row {
         panic error("invalid row");
     }
     (int|string|decimal)[] values = resVal[0];
+    var { startIndex } = intoA1Notation(range.a1Notation);
+    if startIndex == () {
+        panic error("unexpected a1Notation:"+ range.a1Notation);
+    }
+    int rowPosition = <int>startIndex[1];
     return {
-        // FIXME: parse the relevent part of range
-        rowPosition: 0,
+        rowPosition,
         values
     };
 }
@@ -3019,9 +3024,13 @@ isolated function intoColumn(Range range) returns Column {
         }
         values.push(row[0]);
     }
+    var { startIndex } = intoA1Notation(range.a1Notation);
+    if startIndex == () {
+        panic error("unexpected a1Notation:"+ range.a1Notation);
+    }
+    string columnPosition = <string>startIndex[0];
     return {
-        // FIXME: parse the relevent part of range
-        columnPosition: "UNKNOWN",
+        columnPosition,
         values
     };
 }
@@ -3052,20 +3061,97 @@ isolated function tryIntoValueRange(GsheetValueRange valueRange) returns ValueRa
     return intoValueRange(valueRange);
 }
 
-// FIXME: this shouldn't handle the cases where fields are empty (tryTo must handle them).
-// They are getting created by append functions, which seems sus
 isolated function intoValueRange(GsheetValueRange valueRange) returns ValueRange {
     anydata[][] tmpValues = <anydata[][]>valueRange.values;
-    A1Range a1Range = intoA1Range(<string>valueRange.range);
+    string range = <string>valueRange.range;
+    A1Range a1Range = intoA1Range(range);
+    var { startIndex } = intoA1Notation(range);
+    if startIndex == () {
+        panic error("invalid range"+ range);
+    }
+    int rowPosition = <int>startIndex[1];
     (int|string|decimal|boolean|float)[] values = checkpanic tmpValues[0].cloneWithType();
-    return { rowPosition: -1, values, a1Range };
+    return { rowPosition, values, a1Range };
 }
 
+type Index [string?, int?];
+
+type A1Notation record {|
+    string? sheetName;
+    Index? startIndex;
+    Index? endIndex;
+|};
+
 isolated function intoA1Range(string range) returns A1Range {
-    // FIXME:
+    var {sheetName, startIndex, endIndex} = intoA1Notation(range);
+    string? sIndex = startIndex != () ? intoString(startIndex) : ();
+    string? eIndex = endIndex != () ? intoString(endIndex) : ();
+    if sheetName == () {
+        panic error("sheet name is required");
+    }
     return {
-        sheetName: "",
-        startIndex: "",
-        endIndex: ""
+        sheetName,
+        startIndex: sIndex,
+        endIndex: eIndex
     };
+}
+
+isolated function intoString(Index index) returns string {
+    var [column, row] = index;
+    string rowString = row == () ? "" : row.toString();
+    string columnString = column ?: "";
+    return columnString + rowString;
+}
+
+isolated function intoA1Notation(string notation) returns A1Notation {
+    string:RegExp a1Patter = re `(.*!)?([A-Z]*[0-9]*):?([A-Z]*[0-9]*)`;
+    regexp:Groups? groups = a1Patter.findGroups(notation);
+    if groups == () {
+        panic error("invalid A1 notation: " + notation);
+    }
+    regexp:Span? nameSpan = groups[1];
+    regexp:Span? startColumnSpan = groups[2];
+    regexp:Span? endColumnSpan = groups[3];
+    string? sheetName = nameSpan != () ? nameSpan.substring(): ();
+    Index? startIndex = startColumnSpan != () ? parseIndex(startColumnSpan.substring()) : ();
+    Index? endIndex = endColumnSpan != () ? parseIndex(endColumnSpan.substring()) : ();
+    return {
+        sheetName,
+        startIndex,
+        endIndex
+    };
+}
+
+isolated function parseIndex(string index) returns Index? {
+    if index.length() == 0 {
+        return ();
+    }
+    string:RegExp indexPattern = re `([A-Z]*)([0-9]*)`;
+    regexp:Groups? groups = indexPattern.findGroups(index);
+    if groups == () {
+        return ();
+    }
+    regexp:Span? columnSpan = groups[1];
+    regexp:Span? rowSpan = groups[2];
+    string? column = columnSpan != () ? columnSpan.substring() : ();
+    // if rowSpan != () && rowSpan.startIndex == rowSpan.endIndex {
+    //     panic error("invalid A1 notation: " + index);
+    // }
+    int? row = rowSpan != () ? checkpanic int:fromString(rowSpan.substring()) : ();
+    return [column, row];
+}
+
+// -- copied from original
+isolated function getA1RangeString(A1Range a1Range) returns string|error {
+    string filter = a1Range.sheetName;
+    if a1Range.startIndex == () && a1Range.endIndex != () {
+        return error("Error: The provided A1 range is not supported. ");
+    }
+    if a1Range.startIndex != () {
+        filter = string `${filter}!${<string>a1Range.startIndex}`;
+    }
+    if a1Range.endIndex != () {
+        filter = string `${filter}:${<string>a1Range.endIndex}`;
+    }
+    return filter;
 }

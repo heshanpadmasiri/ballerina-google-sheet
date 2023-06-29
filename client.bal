@@ -62,8 +62,9 @@ public isolated client class Client {
                                               returns @tainted error? {
         string notation = (a1Notation is ()) ? string `${sheetName}` : string `${sheetName}!${a1Notation}`;
         Range range = {a1Notation: notation, values: [values]};
-        return self->setRange(spreadsheetId, sheetName, range, valueInputOption);
-
+        GsheetValueRange payload = inToGsheetValueRange(range);
+        // FIXME: value input option
+        AppendValuesResponse _ = check self.gClient->appendValues(spreadsheetId, notation, payload, valueInputOption="RAW");
     }
 
     remote isolated function renameSpreadsheet(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -98,7 +99,8 @@ public isolated client class Client {
     remote isolated function addSheet(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet Name"} string sheetName)
                                     returns @tainted Sheet|error {
-        AddSheetRequest request = {properties: {title: sheetName}};
+        // NOTE: isn't it better to take () instead of ""?
+        AddSheetRequest request = sheetName != "" ?  {properties: {title: sheetName}} : { properties: {}};
         // NOTE: response actually don't have all the sheets (i.e. ())
         BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{addSheet: request}]});
         return self->getSheetByName(spreadsheetId, sheetName);
@@ -129,9 +131,11 @@ public isolated client class Client {
             @display {label: "Worksheet Name"} string sheetName,
             Range range, @display {label: "Value Input Option"} string? valueInputOption = ())
                                     returns @tainted error? {
+        // TODO: handle value input option
+        // FIXME: we are ignoring the a1Notation in range why?
+        string rangeRep = string `${sheetName}!${range.a1Notation}`;
         GsheetValueRange payload = inToGsheetValueRange(range);
-        // FIXME: Maybe we need to add the sheet id to this as well?
-        string rangeRep = range.a1Notation;
+        payload.range = rangeRep;
         UpdateValuesResponse _ = check self.gClient->setRange(spreadsheetId, rangeRep, payload, valueInputOption="RAW");
     }
     remote isolated function getRange(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -139,7 +143,9 @@ public isolated client class Client {
             @display {label: "Range A1 Notation"} string a1Notation,
             @display {label: "Value Render Option"} RenderOptions? valueRenderOption = ())
                                     returns @tainted Range|error {
-        GsheetValueRange? valueRange = check self.gClient->getRange(spreadsheetId, a1Notation, valueRenderOption = valueRenderOption);
+        // TODO: sheetName + a1Notation is common enough and we should have a helper for it 
+        string notation = string `${sheetName}!${a1Notation}`;
+        GsheetValueRange? valueRange = check self.gClient->getRange(spreadsheetId, notation, valueRenderOption = valueRenderOption);
         if valueRange == () {
             return error("empty value range");
         }
@@ -149,14 +155,17 @@ public isolated client class Client {
             @display {label: "Worksheet Name"} string sheetName,
             @display {label: "Range A1 Notation"} string a1Notation)
                                         returns @tainted error? {
-        ClearValuesResponse _ = check self.gClient->clearValues(spreadsheetId, a1Notation, {});
+        string notation = string `${sheetName}!${a1Notation}`;
+        ClearValuesResponse _ = check self.gClient->clearValues(spreadsheetId, notation, {});
     }
     remote isolated function addColumnsBefore(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet ID"} int sheetId,
             @display {label: "Column Position"} int index,
             @display {label: "Number of Columns"} int numberOfColumns)
                                             returns @tainted error? {
-        InsertDimensionRequest request = {range: {sheetId: <int:Signed32>sheetId, dimension: "COLUMNS", startIndex: <int:Signed32>index, endIndex: <int:Signed32>(index + numberOfColumns)}};
+        int:Signed32 startIndex = checkpanic (index - 1).ensureType();
+        int:Signed32 endIndex = checkpanic (startIndex + numberOfColumns).ensureType();
+        InsertDimensionRequest request = {range: {sheetId: <int:Signed32>sheetId, dimension: "COLUMNS", startIndex, endIndex}};
         BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{insertDimension: request}]});
     }
     remote isolated function addColumnsBeforeBySheetName(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -174,7 +183,7 @@ public isolated client class Client {
             @display {label: "Column Position"} int index,
             @display {label: "Number of Columns"} int numberOfColumns)
                                             returns @tainted error? {
-        InsertDimensionRequest request = {range: {sheetId: <int:Signed32>sheetId, dimension: "COLUMNS", startIndex: <int:Signed32>(index + 1), endIndex: <int:Signed32>(index + numberOfColumns + 1)}};
+        InsertDimensionRequest request = {range: {sheetId: <int:Signed32>sheetId, dimension: "COLUMNS", startIndex: <int:Signed32>index, endIndex: <int:Signed32>(index + numberOfColumns)}};
         BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{insertDimension: request}]});
     }
     remote isolated function addColumnsAfterBySheetName(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -192,26 +201,33 @@ public isolated client class Client {
             @display {label: "Column Values"} (int|string|decimal)[] values,
             @display {label: "Value Input Option"} string? valueInputOption = ())
                                                 returns @tainted error? {
-        string notation = sheetName + "!" + column + ":" + column;
+        string notation = string `${sheetName}!${column}:${column}`;
         (int|string|decimal)[][] rows = from var item in values select [item];
         Range range = {a1Notation: notation, values: rows};
-        return check self->setRange(spreadsheetId, sheetName, range, valueInputOption = valueInputOption);
+        GsheetValueRange payload = inToGsheetValueRange(range);
+        UpdateValuesResponse _ = check self.gClient->setRange(spreadsheetId, notation, payload, valueInputOption="RAW");
     }
     remote isolated function getColumn(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet Name"} string sheetName,
             @display {label: "Column Position"} string column,
             @display {label: "Value Render Option"} string? valueRenderOption = ())
                                         returns @tainted Column|error {
-        string notation = sheetName + "!" + column + ":" + column;
-        Range res = check self->getRange(spreadsheetId, sheetName, notation);
-        return intoColumn(res);
+        string notation = string `${sheetName}!${column}:${column}`;
+        GsheetValueRange? valueRange = check self.gClient->getRange(spreadsheetId, notation, valueRenderOption = checkpanic valueRenderOption.ensureType());
+        if valueRange == () {
+            return error("empty value range");
+        }
+        return intoColumn(intoRange(valueRange));
     }
     remote isolated function deleteColumns(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet ID"} int sheetId,
             @display {label: "Starting Column Position"} int column,
             @display {label: "Number of Columns"} int numberOfColumns)
                                             returns @tainted error? {
-        DeleteDimensionRequest request = {range: {sheetId: <int:Signed32>sheetId, dimension: "COLUMNS", startIndex: <int:Signed32>column, endIndex: <int:Signed32>(column + numberOfColumns)}};
+        // NOTE: why is this not consistent 
+        int:Signed32 startIndex = checkpanic (column - 1).ensureType();
+        int:Signed32 endIndex = checkpanic (startIndex + numberOfColumns).ensureType();
+        DeleteDimensionRequest request = {range: {sheetId: <int:Signed32>sheetId, dimension: "COLUMNS", startIndex, endIndex}};
         BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{deleteDimension: request}]});
     }
     remote isolated function deleteColumnsBySheetName(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -228,7 +244,9 @@ public isolated client class Client {
             @display {label: "Row Position"} int index,
             @display {label: "Number of Rows"} int numberOfRows)
                                             returns @tainted error? {
-        InsertDimensionRequest request = {range: {sheetId: <int:Signed32>sheetId, dimension: "ROWS", startIndex: <int:Signed32>index, endIndex: <int:Signed32>(index + numberOfRows)}};
+        int:Signed32 startIndex = checkpanic (index - 1).ensureType();
+        int:Signed32 endIndex = checkpanic (startIndex + numberOfRows).ensureType();
+        InsertDimensionRequest request = {range: {sheetId: <int:Signed32>sheetId, dimension: "ROWS", startIndex, endIndex}};
         BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{insertDimension: request}]});
     }
     remote isolated function addRowsBeforeBySheetName(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -244,7 +262,7 @@ public isolated client class Client {
             @display {label: "Row Position"} int index,
             @display {label: "Number of Rows"} int numberOfRows)
                                         returns @tainted error? {
-        InsertDimensionRequest request = {range: {sheetId: <int:Signed32>sheetId, dimension: "ROWS", startIndex: <int:Signed32>(index + 1), endIndex: <int:Signed32>(index + numberOfRows + 1)}};
+        InsertDimensionRequest request = {range: {sheetId: <int:Signed32>sheetId, dimension: "ROWS", startIndex: <int:Signed32>(index), endIndex: <int:Signed32>(index + numberOfRows)}};
         BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{insertDimension: request}]});
     }
     remote isolated function addRowsAfterBySheetName(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -261,27 +279,32 @@ public isolated client class Client {
             @display {label: "Row Values"} (int|string|decimal)[] values,
             @display {label: "Value Input Option"} string? valueInputOption = ())
                                                 returns @tainted error? {
-        // FIXME: fill these in
-        string notation = sheetName + "!" + row.toString() + ":" + row.toString();
+        string notation = string `${sheetName}!${row}:${row}`;
         (int|string|decimal)[][] rows = [from var item in values select item];
         Range range = {a1Notation: notation, values: rows};
-        return check self->setRange(spreadsheetId, sheetName, range, valueInputOption = valueInputOption);
+        GsheetValueRange payload = inToGsheetValueRange(range);
+        UpdateValuesResponse _ = check self.gClient->setRange(spreadsheetId, notation, payload, valueInputOption="RAW");
     }
     remote isolated function getRow(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet Name"} string sheetName,
             @display {label: "Row Position"} int row,
             @display {label: "Value Render Option"} string? valueRenderOption = ())
                                     returns @tainted Row|error {
-        string a1Notation = sheetName + "!" + row.toString() + ":" + row.toString();
-        Range res = check self->getRange(spreadsheetId, sheetName, a1Notation);
-        return intoRow(res);
+        string notation = string `${sheetName}!${row}:${row}`;
+        GsheetValueRange? valueRange = check self.gClient->getRange(spreadsheetId, notation, valueRenderOption = checkpanic valueRenderOption.ensureType());
+        if valueRange == () {
+            return error("empty value range");
+        }
+        return intoRow(intoRange(valueRange));
     }
     remote isolated function deleteRows(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet ID"} int sheetId,
             @display {label: "Starting Row Position"} int row,
             @display {label: "Number of Rows"} int numberOfRows)
                                         returns @tainted error? {
-        DeleteDimensionRequest request = {range: {sheetId: <int:Signed32>sheetId, dimension: "ROWS", startIndex: <int:Signed32>row, endIndex: <int:Signed32>(row + numberOfRows)}};
+        int:Signed32 startIndex = checkpanic (row - 1).ensureType();
+        int:Signed32 endIndex = checkpanic (startIndex + numberOfRows).ensureType();
+        DeleteDimensionRequest request = {range: {sheetId: <int:Signed32>sheetId, dimension: "ROWS", startIndex, endIndex}};
         BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{deleteDimension: request}]});
     }
     remote isolated function deleteRowsBySheetName(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -298,9 +321,10 @@ public isolated client class Client {
             @display {label: "Cell Value"} int|string|decimal value,
             @display {label: "Value Input Option"} string? valueInputOption = ())
                                     returns @tainted error? {
-        string notation = sheetName + "!" + a1Notation;
+        string notation = string `${sheetName}!${a1Notation}`;
         Range range = {a1Notation: notation, values: [[value]]};
-        check self->setRange(spreadsheetId, notation, range, valueInputOption = valueInputOption);
+        GsheetValueRange payload = inToGsheetValueRange(range);
+        UpdateValuesResponse _ = check self.gClient->setRange(spreadsheetId, notation, payload, valueInputOption="RAW");
     }
     remote isolated function getCell(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet Name"} string sheetName,
@@ -316,6 +340,8 @@ public isolated client class Client {
                                         returns @tainted error? {
         return self->clearRange(spreadsheetId, sheetName, a1Notation);
     }
+    // NOTE: in cases where we store a float we get a decimal (note that in handcoded version,
+    // we are somewhat cheating by returning the parmeter itself here)
     remote isolated function appendValue(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Row Values"} (int|string|decimal|boolean|float)[] values,
             @display {label: "Range A1 Notation"} A1Range a1Range,
@@ -323,9 +349,8 @@ public isolated client class Client {
                                         returns error|ValueRange {
         string range = check getA1RangeString(a1Range);
         GsheetValueRange payload =  {range, majorDimension: "ROWS", values: [values]};
-        // FIXME: why the hell this is assignable to GsheetValueRange directly (JBUG?)
-        AppendValuesResponse res = check self.gClient->appendValues(spreadsheetId, range, payload, includeValuesInResponse = true, valueInputOption="RAW");
-        // FIXME: also why res.updates assignable to GsheetValueRange directly (JBUG?)
+        // TODO fix valueinput option
+        AppendValuesResponse res = check self.gClient->appendValues(spreadsheetId, range, payload, includeValuesInResponse = true, valueInputOption="RAW", responseValueRenderOption="UNFORMATTED_VALUE");
         GsheetValueRange? valueRange = res.updates?.updatedData;
         return valueRange != () ? intoValueRange(valueRange) : error("Error appending values");
     }
@@ -345,7 +370,7 @@ public isolated client class Client {
     }
     remote isolated function clearAll(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet ID"} int sheetId) returns @tainted error? {
-        UpdateCellsRequest request = { fields: "*", range: {sheetId: <int:Signed32>sheetId, startRowIndex: 0, endRowIndex: 0, startColumnIndex: 0, endColumnIndex: 0}, rows: []};
+        UpdateCellsRequest request = { fields: "*", range: {sheetId: <int:Signed32>sheetId}, rows: []};
         BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{updateCells: request}]});
     }
     remote isolated function clearAllBySheetName(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -385,13 +410,13 @@ public isolated client class Client {
                                                 returns error|ValueRange[] {
         DataFilter dataFilter = intoDataFilter(filter);
         BatchGetValuesByDataFilterRequest request = {dataFilters: [dataFilter], majorDimension:"ROWS"};
-        BatchGetValuesResponse res = check self.gClient->batchGetValuesByDataFilter(spreadsheetId, request);
-        GsheetValueRange[]? valueRanges = res.valueRanges;
-        if valueRanges == () {
+        BatchGetValuesByDataFilterResponse res = check self.gClient->batchGetValuesByDataFilter(spreadsheetId, request);
+        MatchedValueRange[]? matchedRanges = res.valueRanges;
+        if matchedRanges == () {
             // FIXME: not sure why this is the expected behavior
             return [];
         }
-        ValueRange?[] vals = from var each in valueRanges select tryIntoValueRange(each);
+        ValueRange?[] vals = from var each in matchedRanges select tryIntoValueRange(checkpanic each.valueRange.ensureType());
         return from var each in vals where each != () select each;
     }
 
@@ -413,11 +438,16 @@ public isolated client class Client {
                                                   @display {label: "Worksheet ID"} int sheetId,
                                                   @display {label: "Filter"} Filter filter)
                                                   returns error? {
-        DataFilter dataFilter = intoDataFilter(filter);
-        DataFilterValueRange filterRange = { dataFilter, values:[], majorDimension: "ROWS"};
-        BatchUpdateValuesByDataFilterRequest request = {data: [filterRange], 
-                                                includeValuesInResponse: false, valueInputOption: "RAW"};
-        BatchUpdateValuesByDataFilterResponse _ = check self.gClient->batchUpdateValuesByDataFilter(spreadsheetId, request);
+        ValueRange[] values = check self->getRowByDataFilter(spreadsheetId, sheetId, filter); 
+        DeleteDimensionRequest[] reqs = [];
+        foreach var each in values {
+            int:Signed32 startIndex = checkpanic (each.rowPosition - 1).ensureType();
+            int:Signed32 endIndex = checkpanic each.rowPosition.ensureType();
+            DeleteDimensionRequest req = {range: {sheetId: <int:Signed32>sheetId, dimension: "ROWS", startIndex, endIndex }};
+            reqs.push(req);
+        }
+        Request[] requests = from var each in reqs select { deleteDimension: each };
+        BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests});
    }
 }
 
@@ -918,16 +948,3 @@ class GsheetClient {
     }
 }
 
-public isolated function getA1RangeString(A1Range a1Range) returns string|error {
-    string filter = a1Range.sheetName;
-    if a1Range.startIndex == () && a1Range.endIndex != () {
-        return error("Error: The provided A1 range is not supported. ");
-    }
-    if a1Range.startIndex != () {
-        filter = string `${filter}!${<string>a1Range.startIndex}`;
-    }
-    if a1Range.endIndex != () {
-        filter = string `${filter}:${<string>a1Range.endIndex}`;
-    }
-    return filter;
-}
