@@ -26,7 +26,6 @@ def fix_generated_client_name(client_path: str, inplace: bool) -> None:
     with open(client_path, "r") as file:
         lines = file.readlines()
         for line in lines:
-            #TODO: think about using a regex here
             tokens = line.strip().split()
             if tokens == [
                 "public",
@@ -75,7 +74,7 @@ def file_content_with_new_types(
     body = []
     for line in lines:
         for old_name, new_name in type_name_list.items():
-            # space to make sure we don't replace FooBar when we try to replace just Foo
+            # space to make sure we don't raplace FooBar when we try to replace just Foo
             # NOTE: this is not a perfect solution but it is sufficient to the
             # currently generated code
             # TODO: may be a good idea to use a regex here
