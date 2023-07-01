@@ -59,6 +59,63 @@ def rename_types(
         file_path: str,
         type_name_list: NameList,
         inplace: bool) -> None:
+    fix_generated_client_name(client_path, inplace)
+    rename_functions(client_path, function_name_list, inplace)
+    rename_types(client_path, type_name_list, inplace)
+    rename_types(types_path, type_name_list, inplace)
+
+
+def fix_generated_client_name(client_path: str, inplace: bool) -> None:
+    body = []
+    with open(client_path, "r") as file:
+        lines = file.readlines()
+        for line in lines:
+            #TODO: think about using a regex here
+            tokens = line.strip().split()
+            if tokens == [
+                "public",
+                "isolated",
+                "client",
+                "class",
+                "Client",
+                    "{"]:
+                body.append("isolated client class GsheetClient {\n")
+            else:
+                body.append(line)
+    new_file_path = client_path if inplace else "new_" + client_path
+    with open(new_file_path, "w") as file:
+        file.writelines(body)
+
+
+def rename_functions(
+        file_path: str,
+        function_name_list: NameList,
+        inplace: bool) -> None:
+    body = []
+    with open(file_path, "r") as file:
+        lines = file.readlines()
+        body = new_client_content(lines, function_name_list)
+    new_file_path = file_path if inplace else "new_" + file_path
+    with open(new_file_path, "w") as file:
+        file.writelines(body)
+
+
+def rename_types(
+        file_path: str,
+        type_name_list: NameList,
+        inplace: bool) -> None:
+    body = []
+    with open(file_path, "r") as file:
+        lines = file.readlines()
+        body = file_content_with_new_types(lines, type_name_list)
+    new_file_path = file_path if inplace else "new_" + file_path
+    with open(new_file_path, "w") as file:
+        file.writelines(body)
+
+
+def file_content_with_new_types(
+        lines: List[str],
+        type_name_list: NameList) -> List[str]:
     body = []
     with open(file_path, "r") as file:
         lines = file.readlines()

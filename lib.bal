@@ -295,7 +295,7 @@ public isolated client class Client {
             @display {label: "Value Render Option"} RenderOptions? valueRenderOption = ())
                                     returns @tainted Range|error {
         string notation = sheetNotation(sheetName, a1Notation);
-        DataRange? valueRange = check self.gClient->getValueRange(spreadsheetId, notation, valueRenderOption = valueRenderOption);
+        GsheetValueRange? valueRange = check self.gClient->getValueRange(spreadsheetId, notation, valueRenderOption = valueRenderOption);
         if valueRange == () {
             return error("empty value range");
         }
@@ -380,7 +380,7 @@ public isolated client class Client {
             @display {label: "Value Render Option"} string? valueRenderOption = ())
                                         returns @tainted Column|error {
         string notation = string `${sheetName}!${column}:${column}`;
-        DataRange? valueRange = check self.gClient->getValueRange(spreadsheetId, notation,
+        GsheetValueRange? valueRange = check self.gClient->getValueRange(spreadsheetId, notation,
                                                                         valueRenderOption = checkpanic valueRenderOption.ensureType());
         if valueRange == () {
             return error("empty value range");
@@ -493,7 +493,7 @@ public isolated client class Client {
             @display {label: "Value Render Option"} string? valueRenderOption = ())
                                     returns @tainted Row|error {
         string notation = string `${sheetName}!${row}:${row}`;
-        DataRange? valueRange = check self.gClient->getValueRange(spreadsheetId, notation,
+        GsheetValueRange? valueRange = check self.gClient->getValueRange(spreadsheetId, notation,
                                                                         valueRenderOption = checkpanic valueRenderOption.ensureType());
         if valueRange == () {
             return error("empty value range");
@@ -565,10 +565,10 @@ public isolated client class Client {
             @display {label: "Value Input Option"} string? valueInputOption = ())
                                         returns error|ValueRange {
         string range = check getA1RangeString(a1Range);
-        DataRange payload = {range, majorDimension: "ROWS", values: [values]};
+        GsheetValueRange payload = {range, majorDimension: "ROWS", values: [values]};
         ValueInputOption inputOption = tryIntoValueInputOption(valueInputOption) ?: "RAW";
         AppendValuesResponse res = check self.gClient->appendValues(spreadsheetId, range, payload, includeValuesInResponse = true, valueInputOption = inputOption, responseValueRenderOption = "UNFORMATTED_VALUE");
-        DataRange? valueRange = res.updates?.updatedData;
+        GsheetValueRange? valueRange = res.updates?.updatedData;
         return valueRange != () ? intoValueRange(valueRange) : error("Error appending values");
     }
 
@@ -941,7 +941,7 @@ public isolated client class Client {
     remote isolated function batchGetValuesByDataFilter(string spreadsheetId, BatchGetValuesByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchGetValuesByDataFilterResponse|error {
         return self.gClient->batchGetValuesByDataFilter(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
     }
-    # Sets values in one or more ranges of a spreadsheet. The caller must specify the spreadsheet ID, a valueInputOption, and one or more DataRanges.
+    # Sets values in one or more ranges of a spreadsheet. The caller must specify the spreadsheet ID, a valueInputOption, and one or more GsheetValueRanges.
     #
     # + xgafv - V1 error format.
     # + access_token - OAuth access token.
@@ -1077,7 +1077,7 @@ isolated function intoHttpClientConfiguration(ConnectionConfig config) returns h
 }
 
 isolated function intoCell(BatchGetValuesResponse res) returns Cell {
-    DataRange[]? valueRanges = res.valueRanges;
+    GsheetValueRange[]? valueRanges = res.valueRanges;
     if valueRanges == () {
         panic error("empty value range");
     }
@@ -1133,7 +1133,7 @@ isolated function intoColumn(Range range) returns Column {
     };
 }
 
-isolated function intoRange(DataRange valueRange) returns Range {
+isolated function intoRange(GsheetValueRange valueRange) returns Range {
     return {values: checkpanic valueRange.values.cloneWithType(), a1Notation: <string>valueRange.range};
 }
 
@@ -1150,14 +1150,14 @@ isolated function intoDataFilter(Filter filter) returns DataFilter {
     return {developerMetadataLookup: checkpanic filter.cloneWithType()};
 }
 
-isolated function tryIntoValueRange(DataRange valueRange) returns ValueRange? {
+isolated function tryIntoValueRange(GsheetValueRange valueRange) returns ValueRange? {
     if valueRange.values == () || valueRange.majorDimension == () || valueRange.range == () {
         return ();
     }
     return intoValueRange(valueRange);
 }
 
-isolated function intoValueRange(DataRange valueRange) returns ValueRange {
+isolated function intoValueRange(GsheetValueRange valueRange) returns ValueRange {
     anydata[][] tmpValues = <anydata[][]>valueRange.values;
     string range = <string>valueRange.range;
     A1Range a1Range = intoA1Range(range);

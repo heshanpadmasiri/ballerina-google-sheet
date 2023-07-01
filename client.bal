@@ -177,11 +177,11 @@ isolated client class GsheetClient {
     # + majorDimension - The major dimension that results should use. For example, if the spreadsheet data in Sheet1 is: `A1=1,B1=2,A2=3,B2=4`, then requesting `range=Sheet1!A1:B2?majorDimension=ROWS` returns `[[1,2],[3,4]]`, whereas requesting `range=Sheet1!A1:B2?majorDimension=COLUMNS` returns `[[1,3],[2,4]]`.
     # + valueRenderOption - How values should be represented in the output. The default render option is FORMATTED_VALUE.
     # + return - Successful response 
-    remote isolated function getValueRange(string spreadsheetId, string range, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? dateTimeRenderOption = (), "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS"? majorDimension = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? valueRenderOption = ()) returns DataRange|error {
+    remote isolated function getValueRange(string spreadsheetId, string range, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? dateTimeRenderOption = (), "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS"? majorDimension = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? valueRenderOption = ()) returns GsheetValueRange|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/values/${getEncodedUri(range)}`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType, "dateTimeRenderOption": dateTimeRenderOption, "majorDimension": majorDimension, "valueRenderOption": valueRenderOption};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
-        DataRange response = check self.clientEp->get(resourcePath);
+        GsheetValueRange response = check self.clientEp->get(resourcePath);
         return response;
     }
     # Sets values in a range of a spreadsheet. The caller must specify the spreadsheet ID, range, and a valueInputOption.
@@ -204,7 +204,7 @@ isolated client class GsheetClient {
     # + responseValueRenderOption - Determines how values in the response should be rendered. The default render option is FORMATTED_VALUE.
     # + valueInputOption - How the input data should be interpreted.
     # + return - Successful response 
-    remote isolated function setValueRange(string spreadsheetId, string range, DataRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns UpdateValuesResponse|error {
+    remote isolated function setValueRange(string spreadsheetId, string range, GsheetValueRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns UpdateValuesResponse|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/values/${getEncodedUri(range)}`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType, "includeValuesInResponse": includeValuesInResponse, "responseDateTimeRenderOption": responseDateTimeRenderOption, "responseValueRenderOption": responseValueRenderOption, "valueInputOption": valueInputOption};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -235,7 +235,7 @@ isolated client class GsheetClient {
     # + responseValueRenderOption - Determines how values in the response should be rendered. The default render option is FORMATTED_VALUE.
     # + valueInputOption - How the input data should be interpreted.
     # + return - Successful response 
-    remote isolated function appendValues(string spreadsheetId, string range, DataRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "OVERWRITE"|"INSERT_ROWS"? insertDataOption = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns AppendValuesResponse|error {
+    remote isolated function appendValues(string spreadsheetId, string range, GsheetValueRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "OVERWRITE"|"INSERT_ROWS"? insertDataOption = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns AppendValuesResponse|error {
         string resourcePath = string `/v4/spreadsheets/${getEncodedUri(spreadsheetId)}/values/${getEncodedUri(range)}:append`;
         map<anydata> queryParam = {"$.xgafv": xgafv, "access_token": access_token, "alt": alt, "callback": callback, "fields": fields, "key": 'key, "oauth_token": oauth_token, "prettyPrint": prettyPrint, "quotaUser": quotaUser, "upload_protocol": upload_protocol, "uploadType": uploadType, "includeValuesInResponse": includeValuesInResponse, "insertDataOption": insertDataOption, "responseDateTimeRenderOption": responseDateTimeRenderOption, "responseValueRenderOption": responseValueRenderOption, "valueInputOption": valueInputOption};
         resourcePath = resourcePath + check getPathForQueryParam(queryParam);
@@ -373,7 +373,7 @@ isolated client class GsheetClient {
         BatchGetValuesByDataFilterResponse response = check self.clientEp->post(resourcePath, request);
         return response;
     }
-    # Sets values in one or more ranges of a spreadsheet. The caller must specify the spreadsheet ID, a valueInputOption, and one or more DataRanges.
+    # Sets values in one or more ranges of a spreadsheet. The caller must specify the spreadsheet ID, a valueInputOption, and one or more GsheetValueRanges.
     #
     # + xgafv - V1 error format.
     # + access_token - OAuth access token.

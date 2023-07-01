@@ -17,4 +17,4 @@ sheetsSpreadsheetsDevelopermetadataSearch searchForDeveloperMetadata
 sheetsSpreadsheetsGetbydatafilter getSpreadsheetByDataFilter
 
 # types
-ValueRange DataRange
+ValueRange GsheetValueRange

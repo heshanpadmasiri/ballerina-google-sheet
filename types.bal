@@ -248,7 +248,7 @@ public type UpdateValuesByDataFilterResponse record {
     # The number of columns where at least one cell in the column was updated.
     int:Signed32 updatedColumns?;
     # Data within a range of the spreadsheet.
-    DataRange updatedData?;
+    GsheetValueRange updatedData?;
     # The range (in [A1 notation](/sheets/api/guides/concepts#cell)) that updates were applied to.
     string updatedRange?;
     # The number of rows where at least one cell in the row was updated.
@@ -1810,7 +1810,7 @@ public type MatchedValueRange record {
     # The DataFilters from the request that matched the range of values.
     DataFilter[] dataFilters?;
     # Data within a range of the spreadsheet.
-    DataRange valueRange?;
+    GsheetValueRange valueRange?;
 };
 
 # Adds a new conditional format rule at the given index. All subsequent rules' indexes are incremented.
@@ -2097,8 +2097,8 @@ public type GetSpreadsheetByDataFilterRequest record {
 public type BatchGetValuesResponse record {
     # The ID of the spreadsheet the data was retrieved from.
     string spreadsheetId?;
-    # The requested values. The order of the DataRanges is the same as the order of the requested ranges.
-    DataRange[] valueRanges?;
+    # The requested values. The order of the GsheetValueRanges is the same as the order of the requested ranges.
+    GsheetValueRange[] valueRanges?;
 };
 
 # Properties of a sheet.
@@ -2262,7 +2262,7 @@ public type PivotTable record {
 };
 
 # Data within a range of the spreadsheet.
-public type DataRange record {
+public type GsheetValueRange record {
     # The major dimension of the values. For output, if the spreadsheet data is: `A1=1,B1=2,A2=3,B2=4`, then requesting `range=A1:B2,majorDimension=ROWS` will return `[[1,2],[3,4]]`, whereas requesting `range=A1:B2,majorDimension=COLUMNS` will return `[[1,3],[2,4]]`. For input, with `range=A1:B2,majorDimension=ROWS` then `[[1,2],[3,4]]` will set `A1=1,B1=2,A2=3,B2=4`. With `range=A1:B2,majorDimension=COLUMNS` then `[[1,2],[3,4]]` will set `A1=1,B1=3,A2=2,B2=4`. When writing, if this field is not set, it defaults to ROWS.
     "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS" majorDimension?;
     # The range the values cover, in [A1 notation](/sheets/api/guides/concepts#cell). For output, this range indicates the entire requested range, even though the values will exclude trailing rows and columns. When appending values, this field represents the range to search for a table, after which values will be appended.
@@ -2758,7 +2758,7 @@ public type AddChartResponse record {
 # The request for updating more than one range of values in a spreadsheet.
 public type BatchUpdateValuesRequest record {
     # The new values to apply to the spreadsheet.
-    DataRange[] data?;
+    GsheetValueRange[] data?;
     # Determines if the update response should include the values of the cells that were updated. By default, responses do not include the updated values. The `updatedData` field within each of the BatchUpdateValuesResponse.responses contains the updated values. If the range to write was larger than the range actually written, the response includes all values in the requested range (excluding trailing empty rows and columns).
     boolean includeValuesInResponse?;
     # Determines how dates, times, and durations in the response should be rendered. This is ignored if response_value_render_option is FORMATTED_VALUE. The default dateTime render option is SERIAL_NUMBER.
@@ -2814,7 +2814,7 @@ public type UpdateValuesResponse record {
     # The number of columns where at least one cell in the column was updated.
     int:Signed32 updatedColumns?;
     # Data within a range of the spreadsheet.
-    DataRange updatedData?;
+    GsheetValueRange updatedData?;
     # The range (in A1 notation) that updates were applied to.
     string updatedRange?;
     # The number of rows where at least one cell in the row was updated.
