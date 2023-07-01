@@ -1,7 +1,7 @@
 import ballerina/http;
 
 # Reads and writes Google Sheets.
-public isolated client class GsheetClient {
+isolated client class GsheetClient {
     final http:Client clientEp;
     # Gets invoked to initialize the `connector`.
     #
@@ -373,7 +373,7 @@ public isolated client class GsheetClient {
         BatchGetValuesByDataFilterResponse response = check self.clientEp->post(resourcePath, request);
         return response;
     }
-    # Sets values in one or more ranges of a spreadsheet. The caller must specify the spreadsheet ID, a valueInputOption, and one or more ValueRanges.
+    # Sets values in one or more ranges of a spreadsheet. The caller must specify the spreadsheet ID, a valueInputOption, and one or more GsheetValueRanges.
     #
     # + xgafv - V1 error format.
     # + access_token - OAuth access token.

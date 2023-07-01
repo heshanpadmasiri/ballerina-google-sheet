@@ -2097,7 +2097,7 @@ public type GetSpreadsheetByDataFilterRequest record {
 public type BatchGetValuesResponse record {
     # The ID of the spreadsheet the data was retrieved from.
     string spreadsheetId?;
-    # The requested values. The order of the ValueRanges is the same as the order of the requested ranges.
+    # The requested values. The order of the GsheetValueRanges is the same as the order of the requested ranges.
     GsheetValueRange[] valueRanges?;
 };
 
@@ -2262,7 +2262,6 @@ public type PivotTable record {
 };
 
 # Data within a range of the spreadsheet.
-// TODO: we need to rename this as well (also fix the return types in GsheetClient);
 public type GsheetValueRange record {
     # The major dimension of the values. For output, if the spreadsheet data is: `A1=1,B1=2,A2=3,B2=4`, then requesting `range=A1:B2,majorDimension=ROWS` will return `[[1,2],[3,4]]`, whereas requesting `range=A1:B2,majorDimension=COLUMNS` will return `[[1,3],[2,4]]`. For input, with `range=A1:B2,majorDimension=ROWS` then `[[1,2],[3,4]]` will set `A1=1,B1=2,A2=3,B2=4`. With `range=A1:B2,majorDimension=COLUMNS` then `[[1,2],[3,4]]` will set `A1=1,B1=3,A2=2,B2=4`. When writing, if this field is not set, it defaults to ROWS.
     "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS" majorDimension?;

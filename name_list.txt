@@ -1,3 +1,4 @@
+# functions
 sheetsSpreadsheetsCreate createSpreadsheet
 sheetsSpreadsheetsGet getSpreadsheetById
 sheetsSpreadsheetsValuesUpdate setRange
@@ -14,3 +15,6 @@ sheetsSpreadsheetsBatchupdate batchUpdate
 sheetsSpreadsheetsDevelopermetadataGet getDeveloperMetadata
 sheetsSpreadsheetsDevelopermetadataSearch searchForDeveloperMetadata
 sheetsSpreadsheetsGetbydatafilter getSpreadsheetByDataFilter
+
+# types
+ValueRange GsheetValueRange

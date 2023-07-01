@@ -11,15 +11,77 @@ ParseResult = Optional[ResourceFunction]
 
 def rename_client(
         client_path: str,
-        name_list: NameList,
+        types_path: str,
+        function_name_list: NameList,
+        type_name_list: NameList,
+        inplace: bool) -> None:
+    fix_generated_client_name(client_path, inplace)
+    rename_functions(client_path, function_name_list, inplace)
+    rename_types(client_path, type_name_list, inplace)
+    rename_types(types_path, type_name_list, inplace)
+
+
+def fix_generated_client_name(client_path: str, inplace: bool) -> None:
+    body = []
+    with open(client_path, "r") as file:
+        lines = file.readlines()
+        for line in lines:
+            #TODO: think about using a regex here
+            tokens = line.strip().split()
+            if tokens == [
+                "public",
+                "isolated",
+                "client",
+                "class",
+                "Client",
+                    "{"]:
+                body.append("isolated client class GsheetClient {\n")
+            else:
+                body.append(line)
+    new_file_path = client_path if inplace else "new_" + client_path
+    with open(new_file_path, "w") as file:
+        file.writelines(body)
+
+
+def rename_functions(
+        file_path: str,
+        function_name_list: NameList,
         inplace: bool) -> None:
     body = []
-    with open(client_path, "r") as client_file:
-        lines = client_file.readlines()
-        body = new_client_content(lines, name_list)
-    new_client_path = client_path if inplace else "new_client.bal"
-    with open(new_client_path, "w") as client_file:
-        client_file.writelines(body)
+    with open(file_path, "r") as file:
+        lines = file.readlines()
+        body = new_client_content(lines, function_name_list)
+    new_file_path = file_path if inplace else "new_" + file_path
+    with open(new_file_path, "w") as file:
+        file.writelines(body)
+
+
+def rename_types(
+        file_path: str,
+        type_name_list: NameList,
+        inplace: bool) -> None:
+    body = []
+    with open(file_path, "r") as file:
+        lines = file.readlines()
+        body = file_content_with_new_types(lines, type_name_list)
+    new_file_path = file_path if inplace else "new_" + file_path
+    with open(new_file_path, "w") as file:
+        file.writelines(body)
+
+
+def file_content_with_new_types(
+        lines: List[str],
+        type_name_list: NameList) -> List[str]:
+    body = []
+    for line in lines:
+        for old_name, new_name in type_name_list.items():
+            # space to make sure we don't replace FooBar when we try to replace just Foo
+            # NOTE: this is not a perfect solution but it is sufficient to the
+            # currently generated code
+            # TODO: may be a good idea to use a regex here
+            line = line.replace(f' {old_name}', f' {new_name}')
+        body.append(line)
+    return body
 
 
 def new_client_content(
@@ -48,12 +110,13 @@ def generic_new_name(old_name: str) -> str:
     will be "[Verb]<Noun>"
     """
     prefix = "sheetsSpreadsheets"
-    assert(old_name.startswith(prefix))
+    assert (old_name.startswith(prefix))
     name = old_name[len(prefix):]
     for i, c in enumerate(name):
         if i != 0 and c.isupper():
             return name[i:].lower() + name[:i]
     return name
+
 
 def parse_line(line: str) -> ParseResult:
     tokens = line.strip().split()
@@ -66,22 +129,29 @@ def parse_line(line: str) -> ParseResult:
     return None
 
 
-def read_name_list(name_list_path: str) -> NameList:
-    name_list = {}
+def read_name_list(name_list_path: str) -> Tuple[NameList, NameList]:
+    function_name_list = {}
+    type_name_list = {}
+    name_list = function_name_list
     with open(name_list_path, "r") as f:
         for line in f.readlines():
             line = line.strip()
+            if line == "# functions":
+                name_list = function_name_list
+            elif line == "# types":
+                name_list = type_name_list
             if len(line) == 0 or line[0] == "#":
                 continue
             org_name, new_name = line.split()
             name_list[org_name] = new_name
-    return name_list
+    return function_name_list, type_name_list
 
 
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(
         prog="rename", description="Rename generated client")
-    arg_parser.add_argument("client_path", help="Path to client.bal file")
+    # TODO: optionally take a client path
+    # arg_parser.add_argument("client_path", help="Path to client.bal file")
     arg_parser.add_argument(
         "name_list_path",
         help="Path to hardcoded name list")
@@ -91,5 +161,10 @@ if __name__ == "__main__":
         action="store_true",
         default=False)
     args = arg_parser.parse_args()
-    hardcoded_name_list = read_name_list(args.name_list_path)
-    rename_client(args.client_path, hardcoded_name_list, args.inplace)
+    function_name_list, type_name_list = read_name_list(args.name_list_path)
+    rename_client(
+        "client.bal",
+        "types.bal",
+        function_name_list,
+        type_name_list,
+        args.inplace)
