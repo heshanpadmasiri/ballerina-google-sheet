@@ -149,14 +149,17 @@ public enum LocationMatchingStrategy {
 };
 
 public isolated client class Client {
+    *GsheetClient;
     private final GsheetClient gClient;
     private final http:Client driveClient;
+    final http:Client clientEp;
 
     public isolated function init(ConnectionConfig config) returns error? {
         self.driveClient = check new ("https://www.googleapis.com",
             check intoHttpClientConfiguration(config)
         );
         self.gClient = check new (config);
+        self.clientEp = self.gClient.clientEp;
     }
 
     remote isolated function createSpreadsheet(@display {label: "Google Sheet Name"} string name)
