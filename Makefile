@@ -4,11 +4,16 @@ API_SPEC=openapi.yaml
 NAME_LIST=name_list.txt
 GENERATED_FILES=client.bal types.bal utils.bal
 RENAME_STAMP=rename.stamp
+INCLUSION_STAMP=inclusion.stamp
 
-all: $(RENAME_STAMP)
+all: $(RENAME_STAMP) $(INCLUSION_STAMP)
 
 test: $(RENAME_STAMP) $(GENERATED_FILES)
 	$(BAL) test
+
+$(INCLUSION_STAMP): $(GENERATED_FILES)
+	$(PYTHON) inclusion.py
+	touch $(INCLUSION_STAMP)
 
 $(RENAME_STAMP): $(GENERATED_FILES)
 	$(PYTHON) rename.py --inplace $(NAME_LIST)

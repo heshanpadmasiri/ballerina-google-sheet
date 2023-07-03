@@ -14,7 +14,7 @@ public type ValueRange record {
 
 # File information
 #
-# + kind - Identifies what kind of resource is this. Value: the fixed string "drive#file".   
+# + kind - Identifies what kind of resource is this. Value: the fixed string "drive#file".
 # + id - The Id of the file
 # + name - The name of the file
 # + mimeType - The MIME type of the file
@@ -272,7 +272,7 @@ public isolated client class Client {
             @display {label: "Range A1 Notation"} string a1Notation,
             @display {label: "Value Render Option"} RenderOptions? valueRenderOption = ())
                                     returns @tainted Range|error {
-        // TODO: sheetName + a1Notation is common enough and we should have a helper for it 
+        // TODO: sheetName + a1Notation is common enough and we should have a helper for it
         string notation = string `${sheetName}!${a1Notation}`;
         GsheetValueRange? valueRange = check self.gClient->getRange(spreadsheetId, notation, valueRenderOption = valueRenderOption);
         if valueRange == () {
@@ -362,7 +362,7 @@ public isolated client class Client {
             @display {label: "Starting Column Position"} int column,
             @display {label: "Number of Columns"} int numberOfColumns)
                                             returns @tainted error? {
-        // NOTE: why is this not consistent 
+        // NOTE: why is this not consistent
         int:Signed32 startIndex = checkpanic (column - 1).ensureType();
         int:Signed32 endIndex = checkpanic (startIndex + numberOfColumns).ensureType();
         DeleteDimensionRequest request = {range: {sheetId: <int:Signed32>sheetId, dimension: "COLUMNS", startIndex, endIndex}};
@@ -503,7 +503,7 @@ public isolated client class Client {
                                         returns error|ValueRange {
         string range = check getA1RangeString(a1Range);
         GsheetValueRange payload = {range, majorDimension: "ROWS", values: [values]};
-        // TODO: fix valueinput option
+        // TODO: fix valueinput option)
         AppendValuesResponse res = check self.gClient->appendValues(spreadsheetId, range, payload, includeValuesInResponse = true, valueInputOption = "RAW", responseValueRenderOption = "UNFORMATTED_VALUE");
         GsheetValueRange? valueRange = res.updates?.updatedData;
         return valueRange != () ? intoValueRange(valueRange) : error("Error appending values");
@@ -615,6 +615,338 @@ public isolated client class Client {
             select {deleteDimension: each};
         BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests});
     }
+
+    // includeClient!(GsheetClient, gClient)
+    # Creates a spreadsheet, returning the newly created spreadsheet.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + return - Successful response
+    remote isolated function createSpreadsheet_inner(Spreadsheet payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns Spreadsheet|error{
+        return self.gClient->createSpreadsheet(payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
+    }
+    # Returns the spreadsheet at the given ID. The caller must specify the spreadsheet ID. By default, data within grids is not returned. You can include grid data in one of 2 ways: * Specify a [field mask](https://developers.google.com/sheets/api/guides/field-masks) listing your desired fields using the `fields` URL parameter in HTTP * Set the includeGridData URL parameter to true. If a field mask is set, the `includeGridData` parameter is ignored For large spreadsheets, as a best practice, retrieve only the specific spreadsheet fields that you want. To retrieve only subsets of spreadsheet data, use the ranges URL parameter. Ranges are specified using [A1 notation](/sheets/api/guides/concepts#cell). You can define a single cell (for example, `A1`) or multiple cells (for example, `A1:D5`). You can also get cells from other sheets within the same spreadsheet (for example, `Sheet2!A1:C4`) or retrieve multiple ranges at once (for example, `?ranges=A1:D5&ranges=Sheet2!A1:C4`). Limiting the range returns only the portions of the spreadsheet that intersect the requested ranges.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + spreadsheetId - The spreadsheet to request.
+    # + includeGridData - True if grid data should be returned. This parameter is ignored if a field mask was set in the request.
+    # + ranges - The ranges to retrieve from the spreadsheet.
+    # + return - Successful response
+    remote isolated function openSpreadsheetById_inner(string spreadsheetId, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeGridData = (), string[]? ranges = ()) returns Spreadsheet|error{
+        return self.gClient->openSpreadsheetById(spreadsheetId, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType, includeGridData, ranges);
+    }
+    # Returns the developer metadata with the specified ID. The caller must specify the spreadsheet ID and the developer metadata's unique metadataId.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + spreadsheetId - The ID of the spreadsheet to retrieve metadata from.
+    # + metadataId - The ID of the developer metadata to retrieve.
+    # + return - Successful response
+    remote isolated function getDeveloperMetadata_inner(string spreadsheetId, int metadataId, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns DeveloperMetadata|error{
+        return self.gClient->getDeveloperMetadata(spreadsheetId, metadataId, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
+    }
+    # Returns all developer metadata matching the specified DataFilter. If the provided DataFilter represents a DeveloperMetadataLookup object, this will return all DeveloperMetadata entries selected by it. If the DataFilter represents a location in a spreadsheet, this will return all developer metadata associated with locations intersecting that region.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + spreadsheetId - The ID of the spreadsheet to retrieve metadata from.
+    # + return - Successful response
+    remote isolated function searchForDeveloperMetadata_inner(string spreadsheetId, SearchDeveloperMetadataRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns SearchDeveloperMetadataResponse|error{
+        return self.gClient->searchForDeveloperMetadata(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
+    }
+    # Copies a single sheet from a spreadsheet to another spreadsheet. Returns the properties of the newly created sheet.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + spreadsheetId - The ID of the spreadsheet containing the sheet to copy.
+    # + sheetId - The ID of the sheet to copy.
+    # + return - Successful response
+    remote isolated function copyTo_inner(string spreadsheetId, int sheetId, CopySheetToAnotherSpreadsheetRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns SheetProperties|error{
+        return self.gClient->copyTo(spreadsheetId, sheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
+    }
+    # Returns a range of values from a spreadsheet. The caller must specify the spreadsheet ID and a range.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + spreadsheetId - The ID of the spreadsheet to retrieve data from.
+    # + range - The [A1 notation or R1C1 notation](/sheets/api/guides/concepts#cell) of the range to retrieve values from.
+    # + dateTimeRenderOption - How dates, times, and durations should be represented in the output. This is ignored if value_render_option is FORMATTED_VALUE. The default dateTime render option is SERIAL_NUMBER.
+    # + majorDimension - The major dimension that results should use. For example, if the spreadsheet data in Sheet1 is: `A1=1,B1=2,A2=3,B2=4`, then requesting `range=Sheet1!A1:B2?majorDimension=ROWS` returns `[[1,2],[3,4]]`, whereas requesting `range=Sheet1!A1:B2?majorDimension=COLUMNS` returns `[[1,3],[2,4]]`.
+    # + valueRenderOption - How values should be represented in the output. The default render option is FORMATTED_VALUE.
+    # + return - Successful response
+    remote isolated function getRange_inner(string spreadsheetId, string range, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? dateTimeRenderOption = (), "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS"? majorDimension = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? valueRenderOption = ()) returns GsheetValueRange|error{
+        return self.gClient->getRange(spreadsheetId, range, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType, dateTimeRenderOption, majorDimension, valueRenderOption);
+    }
+    # Sets values in a range of a spreadsheet. The caller must specify the spreadsheet ID, range, and a valueInputOption.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + spreadsheetId - The ID of the spreadsheet to update.
+    # + range - The [A1 notation](/sheets/api/guides/concepts#cell) of the values to update.
+    # + includeValuesInResponse - Determines if the update response should include the values of the cells that were updated. By default, responses do not include the updated values. If the range to write was larger than the range actually written, the response includes all values in the requested range (excluding trailing empty rows and columns).
+    # + responseDateTimeRenderOption - Determines how dates, times, and durations in the response should be rendered. This is ignored if response_value_render_option is FORMATTED_VALUE. The default dateTime render option is SERIAL_NUMBER.
+    # + responseValueRenderOption - Determines how values in the response should be rendered. The default render option is FORMATTED_VALUE.
+    # + valueInputOption - How the input data should be interpreted.
+    # + return - Successful response
+    remote isolated function setRange_inner(string spreadsheetId, string range, GsheetValueRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns UpdateValuesResponse|error{
+        return self.gClient->setRange(spreadsheetId, range, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType, includeValuesInResponse, responseDateTimeRenderOption, responseValueRenderOption, valueInputOption);
+    }
+    # Appends values to a spreadsheet. The input range is used to search for existing data and find a "table" within that range. Values will be appended to the next row of the table, starting with the first column of the table. See the [guide](/sheets/api/guides/values#appending_values) and [sample code](/sheets/api/samples/writing#append_values) for specific details of how tables are detected and data is appended. The caller must specify the spreadsheet ID, range, and a valueInputOption. The `valueInputOption` only controls how the input data will be added to the sheet (column-wise or row-wise), it does not influence what cell the data starts being written to.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + spreadsheetId - The ID of the spreadsheet to update.
+    # + range - The [A1 notation](/sheets/api/guides/concepts#cell) of a range to search for a logical table of data. Values are appended after the last row of the table.
+    # + includeValuesInResponse - Determines if the update response should include the values of the cells that were appended. By default, responses do not include the updated values.
+    # + insertDataOption - How the input data should be inserted.
+    # + responseDateTimeRenderOption - Determines how dates, times, and durations in the response should be rendered. This is ignored if response_value_render_option is FORMATTED_VALUE. The default dateTime render option is SERIAL_NUMBER.
+    # + responseValueRenderOption - Determines how values in the response should be rendered. The default render option is FORMATTED_VALUE.
+    # + valueInputOption - How the input data should be interpreted.
+    # + return - Successful response
+    remote isolated function appendValues_inner(string spreadsheetId, string range, GsheetValueRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "OVERWRITE"|"INSERT_ROWS"? insertDataOption = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns AppendValuesResponse|error{
+        return self.gClient->appendValues(spreadsheetId, range, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType, includeValuesInResponse, insertDataOption, responseDateTimeRenderOption, responseValueRenderOption, valueInputOption);
+    }
+    # Clears values from a spreadsheet. The caller must specify the spreadsheet ID and range. Only values are cleared -- all other properties of the cell (such as formatting, data validation, etc..) are kept.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + spreadsheetId - The ID of the spreadsheet to update.
+    # + range - The [A1 notation or R1C1 notation](/sheets/api/guides/concepts#cell) of the values to clear.
+    # + return - Successful response
+    remote isolated function clearValues_inner(string spreadsheetId, string range, ClearValuesRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns ClearValuesResponse|error{
+        return self.gClient->clearValues(spreadsheetId, range, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
+    }
+    # Clears one or more ranges of values from a spreadsheet. The caller must specify the spreadsheet ID and one or more ranges. Only values are cleared -- all other properties of the cell (such as formatting and data validation) are kept.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + spreadsheetId - The ID of the spreadsheet to update.
+    # + return - Successful response
+    remote isolated function batchClearValues_inner(string spreadsheetId, BatchClearValuesRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchClearValuesResponse|error{
+        return self.gClient->batchClearValues(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
+    }
+    # Clears one or more ranges of values from a spreadsheet. The caller must specify the spreadsheet ID and one or more DataFilters. Ranges matching any of the specified data filters will be cleared. Only values are cleared -- all other properties of the cell (such as formatting, data validation, etc..) are kept.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + spreadsheetId - The ID of the spreadsheet to update.
+    # + return - Successful response
+    remote isolated function batchClearValuesByDataFilter_inner(string spreadsheetId, BatchClearValuesByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchClearValuesByDataFilterResponse|error{
+        return self.gClient->batchClearValuesByDataFilter(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
+    }
+    # Returns one or more ranges of values from a spreadsheet. The caller must specify the spreadsheet ID and one or more ranges.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + spreadsheetId - The ID of the spreadsheet to retrieve data from.
+    # + dateTimeRenderOption - How dates, times, and durations should be represented in the output. This is ignored if value_render_option is FORMATTED_VALUE. The default dateTime render option is SERIAL_NUMBER.
+    # + majorDimension - The major dimension that results should use. For example, if the spreadsheet data is: `A1=1,B1=2,A2=3,B2=4`, then requesting `ranges=["A1:B2"],majorDimension=ROWS` returns `[[1,2],[3,4]]`, whereas requesting `ranges=["A1:B2"],majorDimension=COLUMNS` returns `[[1,3],[2,4]]`.
+    # + ranges - The [A1 notation or R1C1 notation](/sheets/api/guides/concepts#cell) of the range to retrieve values from.
+    # + valueRenderOption - How values should be represented in the output. The default render option is ValueRenderOption.FORMATTED_VALUE.
+    # + return - Successful response
+    remote isolated function batchGetValues_inner(string spreadsheetId, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? dateTimeRenderOption = (), "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS"? majorDimension = (), string[]? ranges = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? valueRenderOption = ()) returns BatchGetValuesResponse|error{
+        return self.gClient->batchGetValues(spreadsheetId, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType, dateTimeRenderOption, majorDimension, ranges, valueRenderOption);
+    }
+    # Returns one or more ranges of values that match the specified data filters. The caller must specify the spreadsheet ID and one or more DataFilters. Ranges that match any of the data filters in the request will be returned.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + spreadsheetId - The ID of the spreadsheet to retrieve data from.
+    # + return - Successful response
+    remote isolated function batchGetValuesByDataFilter_inner(string spreadsheetId, BatchGetValuesByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchGetValuesByDataFilterResponse|error{
+        return self.gClient->batchGetValuesByDataFilter(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
+    }
+    # Sets values in one or more ranges of a spreadsheet. The caller must specify the spreadsheet ID, a valueInputOption, and one or more GsheetValueRanges.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + spreadsheetId - The ID of the spreadsheet to update.
+    # + return - Successful response
+    remote isolated function batchUpdateValues_inner(string spreadsheetId, BatchUpdateValuesRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchUpdateValuesResponse|error{
+        return self.gClient->batchUpdateValues(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
+    }
+    # Sets values in one or more ranges of a spreadsheet. The caller must specify the spreadsheet ID, a valueInputOption, and one or more DataFilterValueRanges.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + spreadsheetId - The ID of the spreadsheet to update.
+    # + return - Successful response
+    remote isolated function batchUpdateValuesByDataFilter_inner(string spreadsheetId, BatchUpdateValuesByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchUpdateValuesByDataFilterResponse|error{
+        return self.gClient->batchUpdateValuesByDataFilter(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
+    }
+    # Applies one or more updates to the spreadsheet. Each request is validated before being applied. If any request is not valid then the entire request will fail and nothing will be applied. Some requests have replies to give you some information about how they are applied. The replies will mirror the requests. For example, if you applied 4 updates and the 3rd one had a reply, then the response will have 2 empty replies, the actual reply, and another empty reply, in that order. Due to the collaborative nature of spreadsheets, it is not guaranteed that the spreadsheet will reflect exactly your changes after this completes, however it is guaranteed that the updates in the request will be applied together atomically. Your changes may be altered with respect to collaborator changes. If there are no collaborators, the spreadsheet should reflect your changes.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + spreadsheetId - The spreadsheet to apply the updates to.
+    # + return - Successful response
+    remote isolated function batchUpdate_inner(string spreadsheetId, BatchUpdateSpreadsheetRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchUpdateSpreadsheetResponse|error{
+        return self.gClient->batchUpdate(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
+    }
+    # Returns the spreadsheet at the given ID. The caller must specify the spreadsheet ID. This method differs from GetSpreadsheet in that it allows selecting which subsets of spreadsheet data to return by specifying a dataFilters parameter. Multiple DataFilters can be specified. Specifying one or more data filters returns the portions of the spreadsheet that intersect ranges matched by any of the filters. By default, data within grids is not returned. You can include grid data one of 2 ways: * Specify a [field mask](https://developers.google.com/sheets/api/guides/field-masks) listing your desired fields using the `fields` URL parameter in HTTP * Set the includeGridData parameter to true. If a field mask is set, the `includeGridData` parameter is ignored For large spreadsheets, as a best practice, retrieve only the specific spreadsheet fields that you want.
+    #
+    # + xgafv - V1 error format.
+    # + access_token - OAuth access token.
+    # + alt - Data format for response.
+    # + callback - JSONP
+    # + fields - Selector specifying which fields to include in a partial response.
+    # + 'key - API key. Your API key identifies your project and provides you with API access, quota, and reports. Required unless you provide an OAuth 2.0 token.
+    # + oauth_token - OAuth 2.0 token for the current user.
+    # + prettyPrint - Returns response with indentations and line breaks.
+    # + quotaUser - Available to use for quota purposes for server-side applications. Can be any arbitrary string assigned to a user, but should not exceed 40 characters.
+    # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
+    # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
+    # + spreadsheetId - The spreadsheet to request.
+    # + return - Successful response
+    remote isolated function getSpreadsheetByDataFilter_inner(string spreadsheetId, GetSpreadsheetByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns Spreadsheet|error{
+        return self.gClient->getSpreadsheetByDataFilter(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
+    }
+    // end!
 }
 
 const string URL_START = "https://docs.google.com/spreadsheets/d/";
