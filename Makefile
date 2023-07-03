@@ -2,7 +2,9 @@ PYTHON=python3
 BAL=bal
 API_SPEC=openapi.yaml
 NAME_LIST=name_list.txt
-GENERATED_FILES=client.bal types.bal utils.bal
+CLIENT=client.bal
+LIB=lib.bal
+GENERATED_FILES=$(CLIENT) types.bal utils.bal
 RENAME_STAMP=rename.stamp
 INCLUSION_STAMP=inclusion.stamp
 
@@ -12,7 +14,7 @@ test: $(RENAME_STAMP) $(GENERATED_FILES) $(INCLUSION_STAMP)
 	$(BAL) test
 
 $(INCLUSION_STAMP): $(GENERATED_FILES)
-	$(PYTHON) inclusion.py
+	$(PYTHON) inclusion.py $(CLIENT) $(LIB)
 	touch $(INCLUSION_STAMP)
 
 $(RENAME_STAMP): $(GENERATED_FILES)
@@ -24,6 +26,7 @@ $(GENERATED_FILES): $(API_SPEC)
 	$(BAL) openapi -i openapi.yaml --mode=client --client-methods=remote
 
 clean:
+	$(PYTHON) inclusion.py --clean $(CLIENT) $(LIB)
 	rm -f $(GENERATED_FILES)
 	$(BAL) clean
 

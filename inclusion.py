@@ -1,6 +1,6 @@
-from enum import Enum
+import argparse
 import re
-from typing import List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union
 
 # doc comment, code
 RemoteFunction = Tuple[List[str], List[str]]
@@ -13,6 +13,7 @@ Macro = Union[InclusionMacro, EndMacro]
 # signature line (excluding "{"), function_name, [(param type, param name)]
 FunctionSignature = Tuple[str, str, List[Tuple[str, str]]]
 
+ContentGenFn = Callable[[List[str], List[RemoteFunction]], List[str]]
 
 class Tokenizer:
     def __init__(self, lines: List[str]) -> None:
@@ -104,6 +105,27 @@ def new_lib_content(lines: List[str], remote_functions: List[RemoteFunction]) ->
             for each in remote_functions:
                 new_lines.extend(remote_function_defn(each, macro[1]))
             tokenizer.advance()
+            macro = try_parse_macro(tokenizer.current_line())
+            while macro is None or macro[0] is not None:
+                tokenizer.advance()
+                macro = try_parse_macro(tokenizer.current_line())
+            new_lines.append(tokenizer.current_line())
+            tokenizer.advance()
+    return new_lines
+
+
+def clean_lib_content(lines: List[str], _:List[RemoteFunction]) -> List[str]:
+    tokenizer = Tokenizer(lines)
+    new_lines: List[str] = []
+    while not tokenizer.is_end():
+        line = tokenizer.current_line()
+        macro = try_parse_macro(line)
+        if macro is None:
+            new_lines.append(line)
+            tokenizer.advance()
+            continue
+        if macro[0] is not None:
+            new_lines.append(line)
             macro = try_parse_macro(tokenizer.current_line())
             while macro is None or macro[0] is not None:
                 tokenizer.advance()
@@ -253,16 +275,37 @@ def parse_client_class(tokenizer: Tokenizer, client_class_name: str) -> Tokenize
         tokens = tokenizer.current_line().strip().split()
     return Tokenizer(tokenizer.read_till_end_of_block())
 
+def main(client_path: str, lib_path: str, clean: bool):
+    if clean:
+        contentFn = clean_lib_content
+        remote_functions = []
+    else:
+        contentFn = new_lib_content
+        remote_functions = get_remote_functions(client_path)
+    return update_lib(lib_path, remote_functions, contentFn)
 
-if __name__ == "__main__":
-    # TODO: accept client path and lib path as arguments
-    with open("client.bal") as f:
+def get_remote_functions(client_path: str) -> List[RemoteFunction]:
+    with open(client_path) as f:
         lines = list(map(lambda line: line.rstrip(), f.readlines()))
     tokenizer = Tokenizer(lines)
     tokenizer = parse_client_class(tokenizer, "GsheetClient")
-    remote_functions = parse_remote_functions(tokenizer)
-    with open("lib.bal") as f:
+    return parse_remote_functions(tokenizer)
+
+
+def update_lib(lib_path: str, remote_functions: List[RemoteFunction], contentGen: ContentGenFn):
+    with open(lib_path) as f:
         lines = list(map(lambda line: line.rstrip(), f.readlines()))
-    content = new_lib_content(lines, remote_functions)
-    with open("lib.bal", "w") as f:
+    content = contentGen(lines, remote_functions)
+    with open(lib_path, "w") as f:
         f.write("\n".join(content))
+
+if __name__ == "__main__":
+    # TODO: accept client path and lib path as arguments
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("client", help="Path to client.bal")
+    arg_parser.add_argument("lib", help="Path to lib.bal")
+    arg_parser.add_argument(
+        "--clean", action="store_true", help="Remove generated code")
+    args = arg_parser.parse_args()
+    main(args.client, args.lib, args.clean)
+
