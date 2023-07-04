@@ -1,4 +1,5 @@
 import ballerina/http;
+import ballerinax/googleapis.drive;
 import ballerina/lang.regexp;
 
 type RenderOptions "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA";
@@ -152,13 +153,29 @@ public enum LocationMatchingStrategy {
 public isolated client class Client {
     *GsheetClient;
     private final GsheetClient gClient;
-    private final http:Client driveClient;
+    private final drive:Client driveEp;
     final http:Client clientEp;
 
     public isolated function init(ConnectionConfig config) returns error? {
-        self.driveClient = check new ("https://www.googleapis.com",
-            check intoHttpClientConfiguration(config)
-        );
+        var { auth } = config;
+        // NOTE: I think this is a jBug, making fallowing not work
+        // self.driveEp = check new({auth: config.auth});
+        if auth is http:BearerTokenConfig {
+            self.driveEp = check new({
+                auth: checkpanic auth.ensureType()
+            });
+        }
+        else {
+            var { clientId, clientSecret, refreshToken } = auth;
+            self.driveEp = check new({
+                auth: {
+                    clientId,
+                    clientSecret,
+                    refreshToken,
+                    refreshUrl: drive:REFRESH_URL
+                }
+            });
+        }
         self.gClient = check new (config);
         self.clientEp = self.gClient.clientEp;
     }
@@ -180,8 +197,10 @@ public isolated client class Client {
 
     remote isolated function getAllSpreadsheets() returns @display {label: "Stream of Files"} stream<File, error?>|error {
         // NOTE: this is just a copy of original
-        SpreadsheetStream spreadsheetStream = check new SpreadsheetStream(self.driveClient);
-        return new stream<File, error?>(spreadsheetStream);
+        stream<drive:File, error?> s = check self.driveEp->getAllSpreadsheets();
+        return s.map(intoFile);
+        // SpreadsheetStream spreadsheetStream = check new SpreadsheetStream(self.driveClient);
+        // return new stream<File, error?>(spreadsheetStream);
     }
 
     // NOTE: this is depricated but there is a bunch of tests that depend on it
@@ -326,7 +345,7 @@ public isolated client class Client {
             @display {label: "Number of Columns"}
                                                         int numberOfColumns)
                                                         returns @tainted error? {
-        return self->addColumnsAfter(spreadsheetId, check self.getSheetIdByName(spreadsheetId, sheetName), 
+        return self->addColumnsAfter(spreadsheetId, check self.getSheetIdByName(spreadsheetId, sheetName),
                                      index, numberOfColumns);
     }
 
@@ -462,7 +481,7 @@ public isolated client class Client {
             @display {label: "Starting Row Position"} int row,
             @display {label: "Number of Rows"} int numberOfRows)
                                                     returns @tainted error? {
-        return self->deleteRows(spreadsheetId, check self.getSheetIdByName(spreadsheetId, sheetName), 
+        return self->deleteRows(spreadsheetId, check self.getSheetIdByName(spreadsheetId, sheetName),
                                 row, numberOfRows);
     }
 
@@ -974,83 +993,6 @@ isolated function getIdFromUrl(string url) returns string|error {
         error("Invalid url: " + url);
 }
 
-class SpreadsheetStream {
-    private final http:Client httpClient;
-    private string? pageToken;
-    private File[] currentEntries = [];
-    int index = 0;
-
-    isolated function init(http:Client httpClient) returns @tainted error? {
-        self.httpClient = httpClient;
-        self.pageToken = "";
-        self.currentEntries = check self.fetchFiles();
-    }
-
-    public isolated function next() returns @tainted record {|File value;|}|error? {
-        if self.index < self.currentEntries.length() {
-            record {|File value;|} file = {value: self.currentEntries[self.index]};
-            self.index += 1;
-            return file;
-        }
-        if self.pageToken !is string {
-            return ();
-        }
-        self.index = 0;
-        self.currentEntries = check self.fetchFiles();
-        record {|File value;|} file = {value: self.currentEntries[self.index]};
-        self.index += 1;
-        return file;
-    }
-
-    isolated function fetchFiles() returns @tainted File[]|error {
-        string drivePath = <@untainted>prepareDriveUrl(self.pageToken);
-        json response = check sendRequest(self.httpClient, drivePath);
-        FilesResponse|error filesResponse = response.cloneWithType(FilesResponse);
-        if filesResponse is error {
-            return error("Error occurred while constructing FileResponse record.", filesResponse);
-        }
-        self.pageToken = filesResponse?.nextPageToken;
-        return filesResponse.files;
-    }
-}
-
-isolated function prepareDriveUrl(string? pageToken = ()) returns string {
-    if pageToken != () {
-        return string `/drive/v3/files?q=mimeType='application/vnd.google-apps.spreadsheet'&trashed=false&pageToken=${pageToken}`;
-    }
-    return string `/drive/v3/files?q=mimeType='application/vnd.google-apps.spreadsheet'&trashed=false`;
-}
-
-isolated function sendRequest(http:Client httpClient, string path) returns @tainted json|error {
-    http:Response|error httpResponse = httpClient->get(<@untainted>path);
-    if httpResponse !is http:Response {
-        return getSpreadsheetError(httpResponse);
-    }
-    int statusCode = httpResponse.statusCode;
-    json|error jsonResponse = httpResponse.getJsonPayload();
-    if jsonResponse !is json {
-        return getSpreadsheetError(jsonResponse);
-    }
-    error? validateStatusCodeRes = validateStatusCode(jsonResponse, statusCode);
-    if (validateStatusCodeRes is error) {
-        return validateStatusCodeRes;
-    }
-    return jsonResponse;
-}
-
-isolated function validateStatusCode(json response, int statusCode) returns error? {
-    if statusCode != http:STATUS_OK {
-        return getSpreadsheetError(response);
-    }
-}
-
-isolated function getSpreadsheetError(json|error errorResponse) returns error {
-    if (errorResponse is json) {
-        return error(errorResponse.toString());
-    }
-    return errorResponse;
-}
-
 // Conversion functions
 
 isolated function intoHttpClientConfiguration(ConnectionConfig config) returns http:ClientConfiguration|error {
@@ -1272,4 +1214,8 @@ isolated function intoValueInputOption(string option) returns ValueInputOption {
         return option;
     }
     panic error("invalid value input option: " + option);
+}
+
+isolated function intoFile(drive:File file) returns File {
+    return checkpanic file.cloneWithType();
 }
