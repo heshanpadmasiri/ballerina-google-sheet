@@ -3,7 +3,6 @@ import ballerinax/googleapis.drive;
 import ballerina/lang.regexp;
 
 type RenderOptions "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA";
-
 type ValueInputOption "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED";
 
 public type ValueRange record {
