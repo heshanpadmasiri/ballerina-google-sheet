@@ -197,11 +197,8 @@ public isolated client class Client {
     }
 
     remote isolated function getAllSpreadsheets() returns @display {label: "Stream of Files"} stream<File, error?>|error {
-        // NOTE: this is just a copy of original
         stream<drive:File, error?> s = check self.driveEp->getAllSpreadsheets();
         return s.map(intoFile);
-        // SpreadsheetStream spreadsheetStream = check new SpreadsheetStream(self.driveClient);
-        // return new stream<File, error?>(spreadsheetStream);
     }
 
     // NOTE: this is deprecated but there is a bunch of tests that depend on it
@@ -249,7 +246,6 @@ public isolated client class Client {
     remote isolated function addSheet(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet Name"} string sheetName)
                                     returns @tainted Sheet|error {
-        // NOTE: isn't it better to take () instead of ""?
         AddSheetRequest request = sheetName != "" ? {properties: {title: sheetName}} : {properties: {}};
         // NOTE: response actually don't have all the sheets (i.e. ())
         BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId,
