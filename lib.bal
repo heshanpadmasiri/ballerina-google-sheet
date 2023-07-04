@@ -1265,3 +1265,4 @@ isolated function intoValueInputOption(string option) returns ValueInputOption {
 
 isolated function intoFile(drive:File file) returns File {
     return checkpanic file.cloneWithType();
+}
