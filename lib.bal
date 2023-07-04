@@ -197,8 +197,8 @@ public isolated client class Client {
     }
 
     remote isolated function getAllSpreadsheets() returns @display {label: "Stream of Files"} stream<File, error?>|error {
-        stream<drive:File, error?> s = check self.driveEp->getAllSpreadsheets();
-        return s.map(intoFile);
+        stream<drive:File, error?> fileStream = check self.driveEp->getAllSpreadsheets();
+        return fileStream.map(intoFile);
     }
 
     // NOTE: this is deprecated but there is a bunch of tests that depend on it
@@ -210,7 +210,7 @@ public isolated client class Client {
                                             returns @tainted error? {
         string notation = sheetNotation(sheetName, a1Notation);
         Range range = {a1Notation: notation, values: [values]};
-        GsheetValueRange payload = inToGsheetValueRange(range);
+        DataRange payload = intoDataRange(range);
         ValueInputOption inputOption = tryIntoValueInputOption(valueInputOption) ?: "RAW";
         AppendValuesResponse _ = check self.gClient->appendValues(spreadsheetId, notation, payload, valueInputOption = inputOption);
     }
@@ -246,18 +246,18 @@ public isolated client class Client {
     remote isolated function addSheet(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet Name"} string sheetName)
                                     returns @tainted Sheet|error {
-        AddSheetRequest request = sheetName != "" ? {properties: {title: sheetName}} : {properties: {}};
+        AddSheetRequest addSheet = sheetName != "" ? {properties: {title: sheetName}} : {properties: {}};
         // NOTE: response actually don't have all the sheets (i.e. ())
         BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId,
-                                                                    {requests: [{addSheet: request}]});
+                                                                    {requests: [{addSheet}]});
         return self->getSheetByName(spreadsheetId, sheetName);
     }
 
     remote isolated function removeSheet(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet ID"} int sheetId) returns @tainted error? {
-        DeleteSheetRequest request = {sheetId: <int:Signed32>sheetId};
+        DeleteSheetRequest deleteSheet = {sheetId: <int:Signed32>sheetId};
         BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId,
-                                                                    {requests: [{deleteSheet: request}]});
+                                                                    {requests: [{deleteSheet}]});
     }
 
     remote isolated function removeSheetByName(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -272,8 +272,8 @@ public isolated client class Client {
             @display {label: "New Worksheet Name"} string name)
                                         returns @tainted error? {
         int:Signed32 sheetId = check self.getSheetIdByName(spreadsheetId, sheetName);
-        UpdateSheetPropertiesRequest request = {fields: "title", properties: {sheetId, title: name}};
-        BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{updateSheetProperties: request}]});
+        UpdateSheetPropertiesRequest updateSheetProperties = {fields: "title", properties: {sheetId, title: name}};
+        BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{updateSheetProperties}]});
     }
 
     remote isolated function setRange(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -281,7 +281,7 @@ public isolated client class Client {
             Range range, @display {label: "Value Input Option"} string? valueInputOption = ())
                                     returns @tainted error? {
         string rangeRep = sheetNotation(sheetName, range.a1Notation);
-        GsheetValueRange payload = inToGsheetValueRange(range);
+        DataRange payload = intoDataRange(range);
         payload.range = rangeRep;
         ValueInputOption inputOption = tryIntoValueInputOption(valueInputOption) ?: "RAW";
         UpdateValuesResponse _ = check self.gClient->setValueRange(spreadsheetId, rangeRep, payload, valueInputOption = inputOption);
@@ -293,7 +293,7 @@ public isolated client class Client {
             @display {label: "Value Render Option"} RenderOptions? valueRenderOption = ())
                                     returns @tainted Range|error {
         string notation = sheetNotation(sheetName, a1Notation);
-        GsheetValueRange? valueRange = check self.gClient->getValueRange(spreadsheetId, notation, valueRenderOption = valueRenderOption);
+        DataRange? valueRange = check self.gClient->getValueRange(spreadsheetId, notation, valueRenderOption = valueRenderOption);
         if valueRange == () {
             return error("empty value range");
         }
@@ -316,8 +316,8 @@ public isolated client class Client {
                                             returns @tainted error? {
         int:Signed32 startIndex = checkpanic (index - 1).ensureType();
         int:Signed32 endIndex = checkpanic (startIndex + numberOfColumns).ensureType();
-        InsertDimensionRequest request = {range: {sheetId: <int:Signed32>sheetId, dimension: "COLUMNS", startIndex, endIndex}};
-        BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{insertDimension: request}]});
+        InsertDimensionRequest insertDimension = {range: {sheetId: <int:Signed32>sheetId, dimension: "COLUMNS", startIndex, endIndex}};
+        BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{insertDimension}]});
     }
 
     remote isolated function addColumnsBeforeBySheetName(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -335,7 +335,7 @@ public isolated client class Client {
             @display {label: "Column Position"} int index,
             @display {label: "Number of Columns"} int numberOfColumns)
                                             returns @tainted error? {
-        InsertDimensionRequest request = {
+        InsertDimensionRequest insertDimension = {
             range: {
                 sheetId: <int:Signed32>sheetId,
                 dimension: "COLUMNS",
@@ -343,7 +343,7 @@ public isolated client class Client {
                 endIndex: <int:Signed32>(index + numberOfColumns)
             }
         };
-        BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{insertDimension: request}]});
+        BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{insertDimension}]});
     }
 
     remote isolated function addColumnsAfterBySheetName(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -366,7 +366,7 @@ public isolated client class Client {
         (int|string|decimal)[][] rows = from var item in values
             select [item];
         Range range = {a1Notation: notation, values: rows};
-        GsheetValueRange payload = inToGsheetValueRange(range);
+        DataRange payload = intoDataRange(range);
         ValueInputOption inputOption = tryIntoValueInputOption(valueInputOption) ?: "RAW";
         UpdateValuesResponse _ = check self.gClient->setValueRange(spreadsheetId, notation,
                                                                     payload, valueInputOption = inputOption);
@@ -378,7 +378,7 @@ public isolated client class Client {
             @display {label: "Value Render Option"} string? valueRenderOption = ())
                                         returns @tainted Column|error {
         string notation = string `${sheetName}!${column}:${column}`;
-        GsheetValueRange? valueRange = check self.gClient->getValueRange(spreadsheetId, notation,
+        DataRange? valueRange = check self.gClient->getValueRange(spreadsheetId, notation,
                                                                         valueRenderOption = checkpanic valueRenderOption.ensureType());
         if valueRange == () {
             return error("empty value range");
@@ -393,7 +393,7 @@ public isolated client class Client {
                                             returns @tainted error? {
         int:Signed32 startIndex = checkpanic (column - 1).ensureType();
         int:Signed32 endIndex = checkpanic (startIndex + numberOfColumns).ensureType();
-        DeleteDimensionRequest request = {
+        DeleteDimensionRequest deleteDimension = {
             range: {
                 sheetId: <int:Signed32>sheetId,
                 dimension: "COLUMNS",
@@ -401,7 +401,7 @@ public isolated client class Client {
                 endIndex
             }
         };
-        BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{deleteDimension: request}]});
+        BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{deleteDimension}]});
     }
 
     remote isolated function deleteColumnsBySheetName(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -421,7 +421,7 @@ public isolated client class Client {
                                             returns @tainted error? {
         int:Signed32 startIndex = checkpanic (index - 1).ensureType();
         int:Signed32 endIndex = checkpanic (startIndex + numberOfRows).ensureType();
-        InsertDimensionRequest request = {
+        InsertDimensionRequest insertDimension = {
             range: {
                 sheetId: <int:Signed32>sheetId,
                 dimension: "ROWS",
@@ -430,7 +430,7 @@ public isolated client class Client {
             }
         };
         BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId,
-                                                                        {requests: [{insertDimension: request}]});
+                                                                        {requests: [{insertDimension}]});
     }
 
     remote isolated function addRowsBeforeBySheetName(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -479,7 +479,7 @@ public isolated client class Client {
             select item
         ];
         Range range = {a1Notation: notation, values: rows};
-        GsheetValueRange payload = inToGsheetValueRange(range);
+        DataRange payload = intoDataRange(range);
         ValueInputOption inputOption = tryIntoValueInputOption(valueInputOption) ?: "RAW";
         UpdateValuesResponse _ = check self.gClient->setValueRange(spreadsheetId, notation,
                                                                     payload, valueInputOption = inputOption);
@@ -491,7 +491,7 @@ public isolated client class Client {
             @display {label: "Value Render Option"} string? valueRenderOption = ())
                                     returns @tainted Row|error {
         string notation = string `${sheetName}!${row}:${row}`;
-        GsheetValueRange? valueRange = check self.gClient->getValueRange(spreadsheetId, notation,
+        DataRange? valueRange = check self.gClient->getValueRange(spreadsheetId, notation,
                                                                         valueRenderOption = checkpanic valueRenderOption.ensureType());
         if valueRange == () {
             return error("empty value range");
@@ -534,7 +534,7 @@ public isolated client class Client {
                                     returns @tainted error? {
         string notation = string `${sheetName}!${a1Notation}`;
         Range range = {a1Notation: notation, values: [[value]]};
-        GsheetValueRange payload = inToGsheetValueRange(range);
+        DataRange payload = intoDataRange(range);
         ValueInputOption inputOption = tryIntoValueInputOption(valueInputOption) ?: "RAW";
         UpdateValuesResponse _ = check self.gClient->setValueRange(spreadsheetId, notation, payload, valueInputOption = inputOption);
     }
@@ -563,10 +563,10 @@ public isolated client class Client {
             @display {label: "Value Input Option"} string? valueInputOption = ())
                                         returns error|ValueRange {
         string range = check getA1RangeString(a1Range);
-        GsheetValueRange payload = {range, majorDimension: "ROWS", values: [values]};
+        DataRange payload = {range, majorDimension: "ROWS", values: [values]};
         ValueInputOption inputOption = tryIntoValueInputOption(valueInputOption) ?: "RAW";
         AppendValuesResponse res = check self.gClient->appendValues(spreadsheetId, range, payload, includeValuesInResponse = true, valueInputOption = inputOption, responseValueRenderOption = "UNFORMATTED_VALUE");
-        GsheetValueRange? valueRange = res.updates?.updatedData;
+        DataRange? valueRange = res.updates?.updatedData;
         return valueRange != () ? intoValueRange(valueRange) : error("Error appending values");
     }
 
@@ -588,8 +588,8 @@ public isolated client class Client {
 
     remote isolated function clearAll(@display {label: "Google Sheet ID"} string spreadsheetId,
             @display {label: "Worksheet ID"} int sheetId) returns @tainted error? {
-        UpdateCellsRequest request = {fields: "*", range: {sheetId: <int:Signed32>sheetId}, rows: []};
-        BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{updateCells: request}]});
+        UpdateCellsRequest updateCells = {fields: "*", range: {sheetId: <int:Signed32>sheetId}, rows: []};
+        BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests: [{updateCells}]});
     }
 
     remote isolated function clearAllBySheetName(@display {label: "Google Sheet ID"} string spreadsheetId,
@@ -696,7 +696,7 @@ public isolated client class Client {
     # + upload_protocol - Upload protocol for media (e.g. "raw", "multipart").
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + return - Successful response
-    remote isolated function create(Spreadsheet payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns Spreadsheet|error{
+    remote isolated function create(Spreadsheet payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns Spreadsheet|error {
         return self.gClient->create(payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
     }
     # Returns the spreadsheet at the given ID. The caller must specify the spreadsheet ID. By default, data within grids is not returned. You can include grid data in one of 2 ways: * Specify a [field mask](https://developers.google.com/sheets/api/guides/field-masks) listing your desired fields using the `fields` URL parameter in HTTP * Set the includeGridData URL parameter to true. If a field mask is set, the `includeGridData` parameter is ignored For large spreadsheets, as a best practice, retrieve only the specific spreadsheet fields that you want. To retrieve only subsets of spreadsheet data, use the ranges URL parameter. Ranges are specified using [A1 notation](/sheets/api/guides/concepts#cell). You can define a single cell (for example, `A1`) or multiple cells (for example, `A1:D5`). You can also get cells from other sheets within the same spreadsheet (for example, `Sheet2!A1:C4`) or retrieve multiple ranges at once (for example, `?ranges=A1:D5&ranges=Sheet2!A1:C4`). Limiting the range returns only the portions of the spreadsheet that intersect the requested ranges.
@@ -735,7 +735,7 @@ public isolated client class Client {
     # + spreadsheetId - The ID of the spreadsheet to retrieve metadata from.
     # + metadataId - The ID of the developer metadata to retrieve.
     # + return - Successful response
-    remote isolated function getDeveloperMetadata(string spreadsheetId, int metadataId, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns DeveloperMetadata|error{
+    remote isolated function getDeveloperMetadata(string spreadsheetId, int metadataId, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns DeveloperMetadata|error {
         return self.gClient->getDeveloperMetadata(spreadsheetId, metadataId, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
     }
     # Returns all developer metadata matching the specified DataFilter. If the provided DataFilter represents a DeveloperMetadataLookup object, this will return all DeveloperMetadata entries selected by it. If the DataFilter represents a location in a spreadsheet, this will return all developer metadata associated with locations intersecting that region.
@@ -753,7 +753,7 @@ public isolated client class Client {
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + spreadsheetId - The ID of the spreadsheet to retrieve metadata from.
     # + return - Successful response
-    remote isolated function searchForDeveloperMetadata(string spreadsheetId, SearchDeveloperMetadataRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns SearchDeveloperMetadataResponse|error{
+    remote isolated function searchForDeveloperMetadata(string spreadsheetId, SearchDeveloperMetadataRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns SearchDeveloperMetadataResponse|error {
         return self.gClient->searchForDeveloperMetadata(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
     }
     # Copies a single sheet from a spreadsheet to another spreadsheet. Returns the properties of the newly created sheet.
@@ -794,7 +794,7 @@ public isolated client class Client {
     # + majorDimension - The major dimension that results should use. For example, if the spreadsheet data in Sheet1 is: `A1=1,B1=2,A2=3,B2=4`, then requesting `range=Sheet1!A1:B2?majorDimension=ROWS` returns `[[1,2],[3,4]]`, whereas requesting `range=Sheet1!A1:B2?majorDimension=COLUMNS` returns `[[1,3],[2,4]]`.
     # + valueRenderOption - How values should be represented in the output. The default render option is FORMATTED_VALUE.
     # + return - Successful response
-    remote isolated function getValueRange(string spreadsheetId, string range, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? dateTimeRenderOption = (), "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS"? majorDimension = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? valueRenderOption = ()) returns GsheetValueRange|error{
+    remote isolated function getValueRange(string spreadsheetId, string range, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? dateTimeRenderOption = (), "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS"? majorDimension = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? valueRenderOption = ()) returns DataRange|error {
         return self.gClient->getValueRange(spreadsheetId, range, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType, dateTimeRenderOption, majorDimension, valueRenderOption);
     }
     # Sets values in a range of a spreadsheet. The caller must specify the spreadsheet ID, range, and a valueInputOption.
@@ -817,7 +817,7 @@ public isolated client class Client {
     # + responseValueRenderOption - Determines how values in the response should be rendered. The default render option is FORMATTED_VALUE.
     # + valueInputOption - How the input data should be interpreted.
     # + return - Successful response
-    remote isolated function setValueRange(string spreadsheetId, string range, GsheetValueRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns UpdateValuesResponse|error{
+    remote isolated function setValueRange(string spreadsheetId, string range, DataRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns UpdateValuesResponse|error {
         return self.gClient->setValueRange(spreadsheetId, range, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType, includeValuesInResponse, responseDateTimeRenderOption, responseValueRenderOption, valueInputOption);
     }
     # Appends values to a spreadsheet. The input range is used to search for existing data and find a "table" within that range. Values will be appended to the next row of the table, starting with the first column of the table. See the [guide](/sheets/api/guides/values#appending_values) and [sample code](/sheets/api/samples/writing#append_values) for specific details of how tables are detected and data is appended. The caller must specify the spreadsheet ID, range, and a valueInputOption. The `valueInputOption` only controls how the input data will be added to the sheet (column-wise or row-wise), it does not influence what cell the data starts being written to.
@@ -841,7 +841,7 @@ public isolated client class Client {
     # + responseValueRenderOption - Determines how values in the response should be rendered. The default render option is FORMATTED_VALUE.
     # + valueInputOption - How the input data should be interpreted.
     # + return - Successful response
-    remote isolated function appendValues(string spreadsheetId, string range, GsheetValueRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "OVERWRITE"|"INSERT_ROWS"? insertDataOption = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns AppendValuesResponse|error{
+    remote isolated function appendValues(string spreadsheetId, string range, DataRange payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), boolean? includeValuesInResponse = (), "OVERWRITE"|"INSERT_ROWS"? insertDataOption = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? responseDateTimeRenderOption = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? responseValueRenderOption = (), "INPUT_VALUE_OPTION_UNSPECIFIED"|"RAW"|"USER_ENTERED"? valueInputOption = ()) returns AppendValuesResponse|error {
         return self.gClient->appendValues(spreadsheetId, range, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType, includeValuesInResponse, insertDataOption, responseDateTimeRenderOption, responseValueRenderOption, valueInputOption);
     }
     # Clears values from a spreadsheet. The caller must specify the spreadsheet ID and range. Only values are cleared -- all other properties of the cell (such as formatting, data validation, etc..) are kept.
@@ -860,7 +860,7 @@ public isolated client class Client {
     # + spreadsheetId - The ID of the spreadsheet to update.
     # + range - The [A1 notation or R1C1 notation](/sheets/api/guides/concepts#cell) of the values to clear.
     # + return - Successful response
-    remote isolated function clearValues(string spreadsheetId, string range, ClearValuesRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns ClearValuesResponse|error{
+    remote isolated function clearValues(string spreadsheetId, string range, ClearValuesRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns ClearValuesResponse|error {
         return self.gClient->clearValues(spreadsheetId, range, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
     }
     # Clears one or more ranges of values from a spreadsheet. The caller must specify the spreadsheet ID and one or more ranges. Only values are cleared -- all other properties of the cell (such as formatting and data validation) are kept.
@@ -878,7 +878,7 @@ public isolated client class Client {
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + spreadsheetId - The ID of the spreadsheet to update.
     # + return - Successful response
-    remote isolated function batchClearValues(string spreadsheetId, BatchClearValuesRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchClearValuesResponse|error{
+    remote isolated function batchClearValues(string spreadsheetId, BatchClearValuesRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchClearValuesResponse|error {
         return self.gClient->batchClearValues(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
     }
     # Clears one or more ranges of values from a spreadsheet. The caller must specify the spreadsheet ID and one or more DataFilters. Ranges matching any of the specified data filters will be cleared. Only values are cleared -- all other properties of the cell (such as formatting, data validation, etc..) are kept.
@@ -896,7 +896,7 @@ public isolated client class Client {
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + spreadsheetId - The ID of the spreadsheet to update.
     # + return - Successful response
-    remote isolated function batchClearValuesByDataFilter(string spreadsheetId, BatchClearValuesByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchClearValuesByDataFilterResponse|error{
+    remote isolated function batchClearValuesByDataFilter(string spreadsheetId, BatchClearValuesByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchClearValuesByDataFilterResponse|error {
         return self.gClient->batchClearValuesByDataFilter(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
     }
     # Returns one or more ranges of values from a spreadsheet. The caller must specify the spreadsheet ID and one or more ranges.
@@ -918,7 +918,7 @@ public isolated client class Client {
     # + ranges - The [A1 notation or R1C1 notation](/sheets/api/guides/concepts#cell) of the range to retrieve values from.
     # + valueRenderOption - How values should be represented in the output. The default render option is ValueRenderOption.FORMATTED_VALUE.
     # + return - Successful response
-    remote isolated function batchGetValues(string spreadsheetId, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? dateTimeRenderOption = (), "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS"? majorDimension = (), string[]? ranges = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? valueRenderOption = ()) returns BatchGetValuesResponse|error{
+    remote isolated function batchGetValues(string spreadsheetId, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = (), "SERIAL_NUMBER"|"FORMATTED_STRING"? dateTimeRenderOption = (), "DIMENSION_UNSPECIFIED"|"ROWS"|"COLUMNS"? majorDimension = (), string[]? ranges = (), "FORMATTED_VALUE"|"UNFORMATTED_VALUE"|"FORMULA"? valueRenderOption = ()) returns BatchGetValuesResponse|error {
         return self.gClient->batchGetValues(spreadsheetId, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType, dateTimeRenderOption, majorDimension, ranges, valueRenderOption);
     }
     # Returns one or more ranges of values that match the specified data filters. The caller must specify the spreadsheet ID and one or more DataFilters. Ranges that match any of the data filters in the request will be returned.
@@ -936,10 +936,10 @@ public isolated client class Client {
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + spreadsheetId - The ID of the spreadsheet to retrieve data from.
     # + return - Successful response
-    remote isolated function batchGetValuesByDataFilter(string spreadsheetId, BatchGetValuesByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchGetValuesByDataFilterResponse|error{
+    remote isolated function batchGetValuesByDataFilter(string spreadsheetId, BatchGetValuesByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchGetValuesByDataFilterResponse|error {
         return self.gClient->batchGetValuesByDataFilter(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
     }
-    # Sets values in one or more ranges of a spreadsheet. The caller must specify the spreadsheet ID, a valueInputOption, and one or more GsheetValueRanges.
+    # Sets values in one or more ranges of a spreadsheet. The caller must specify the spreadsheet ID, a valueInputOption, and one or more DataRanges.
     #
     # + xgafv - V1 error format.
     # + access_token - OAuth access token.
@@ -954,7 +954,7 @@ public isolated client class Client {
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + spreadsheetId - The ID of the spreadsheet to update.
     # + return - Successful response
-    remote isolated function batchUpdateValues(string spreadsheetId, BatchUpdateValuesRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchUpdateValuesResponse|error{
+    remote isolated function batchUpdateValues(string spreadsheetId, BatchUpdateValuesRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchUpdateValuesResponse|error {
         return self.gClient->batchUpdateValues(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
     }
     # Sets values in one or more ranges of a spreadsheet. The caller must specify the spreadsheet ID, a valueInputOption, and one or more DataFilterValueRanges.
@@ -972,7 +972,7 @@ public isolated client class Client {
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + spreadsheetId - The ID of the spreadsheet to update.
     # + return - Successful response
-    remote isolated function batchUpdateValuesByDataFilter(string spreadsheetId, BatchUpdateValuesByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchUpdateValuesByDataFilterResponse|error{
+    remote isolated function batchUpdateValuesByDataFilter(string spreadsheetId, BatchUpdateValuesByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchUpdateValuesByDataFilterResponse|error {
         return self.gClient->batchUpdateValuesByDataFilter(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
     }
     # Applies one or more updates to the spreadsheet. Each request is validated before being applied. If any request is not valid then the entire request will fail and nothing will be applied. Some requests have replies to give you some information about how they are applied. The replies will mirror the requests. For example, if you applied 4 updates and the 3rd one had a reply, then the response will have 2 empty replies, the actual reply, and another empty reply, in that order. Due to the collaborative nature of spreadsheets, it is not guaranteed that the spreadsheet will reflect exactly your changes after this completes, however it is guaranteed that the updates in the request will be applied together atomically. Your changes may be altered with respect to collaborator changes. If there are no collaborators, the spreadsheet should reflect your changes.
@@ -990,7 +990,7 @@ public isolated client class Client {
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + spreadsheetId - The spreadsheet to apply the updates to.
     # + return - Successful response
-    remote isolated function batchUpdate(string spreadsheetId, BatchUpdateSpreadsheetRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchUpdateSpreadsheetResponse|error{
+    remote isolated function batchUpdate(string spreadsheetId, BatchUpdateSpreadsheetRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns BatchUpdateSpreadsheetResponse|error {
         return self.gClient->batchUpdate(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
     }
     # Returns the spreadsheet at the given ID. The caller must specify the spreadsheet ID. This method differs from GetSpreadsheet in that it allows selecting which subsets of spreadsheet data to return by specifying a dataFilters parameter. Multiple DataFilters can be specified. Specifying one or more data filters returns the portions of the spreadsheet that intersect ranges matched by any of the filters. By default, data within grids is not returned. You can include grid data one of 2 ways: * Specify a [field mask](https://developers.google.com/sheets/api/guides/field-masks) listing your desired fields using the `fields` URL parameter in HTTP * Set the includeGridData parameter to true. If a field mask is set, the `includeGridData` parameter is ignored For large spreadsheets, as a best practice, retrieve only the specific spreadsheet fields that you want.
@@ -1008,7 +1008,7 @@ public isolated client class Client {
     # + uploadType - Legacy upload protocol for media (e.g. "media", "multipart").
     # + spreadsheetId - The spreadsheet to request.
     # + return - Successful response
-    remote isolated function getSpreadsheetByDataFilter(string spreadsheetId, GetSpreadsheetByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns Spreadsheet|error{
+    remote isolated function getSpreadsheetByDataFilter(string spreadsheetId, GetSpreadsheetByDataFilterRequest payload, "1"|"2"? xgafv = (), string? access_token = (), "json"|"media"|"proto"? alt = (), string? callback = (), string? fields = (), string? 'key = (), string? oauth_token = (), boolean? prettyPrint = (), string? quotaUser = (), string? upload_protocol = (), string? uploadType = ()) returns Spreadsheet|error {
         return self.gClient->getSpreadsheetByDataFilter(spreadsheetId, payload, xgafv, access_token, alt, callback, fields, 'key, oauth_token, prettyPrint, quotaUser, upload_protocol, uploadType);
     }
     // end!
@@ -1075,7 +1075,7 @@ isolated function intoHttpClientConfiguration(ConnectionConfig config) returns h
 }
 
 isolated function intoCell(BatchGetValuesResponse res) returns Cell {
-    GsheetValueRange[]? valueRanges = res.valueRanges;
+    DataRange[]? valueRanges = res.valueRanges;
     if valueRanges == () {
         panic error("empty value range");
     }
@@ -1131,11 +1131,11 @@ isolated function intoColumn(Range range) returns Column {
     };
 }
 
-isolated function intoRange(GsheetValueRange valueRange) returns Range {
+isolated function intoRange(DataRange valueRange) returns Range {
     return {values: checkpanic valueRange.values.cloneWithType(), a1Notation: <string>valueRange.range};
 }
 
-isolated function inToGsheetValueRange(Range range) returns GsheetValueRange {
+isolated function intoDataRange(Range range) returns DataRange {
     return {range: range.a1Notation, values: range.values};
 }
 
@@ -1148,14 +1148,14 @@ isolated function intoDataFilter(Filter filter) returns DataFilter {
     return {developerMetadataLookup: checkpanic filter.cloneWithType()};
 }
 
-isolated function tryIntoValueRange(GsheetValueRange valueRange) returns ValueRange? {
+isolated function tryIntoValueRange(DataRange valueRange) returns ValueRange? {
     if valueRange.values == () || valueRange.majorDimension == () || valueRange.range == () {
         return ();
     }
     return intoValueRange(valueRange);
 }
 
-isolated function intoValueRange(GsheetValueRange valueRange) returns ValueRange {
+isolated function intoValueRange(DataRange valueRange) returns ValueRange {
     anydata[][] tmpValues = <anydata[][]>valueRange.values;
     string range = <string>valueRange.range;
     A1Range a1Range = intoA1Range(range);
@@ -1234,14 +1234,15 @@ isolated function parseIndex(string index) returns Index? {
 
 isolated function getA1RangeString(A1Range a1Range) returns string|error {
     string filter = a1Range.sheetName;
-    if a1Range.startIndex == () && a1Range.endIndex != () {
+    var {startIndex, endIndex} = a1Range;
+    if startIndex == () && endIndex != () {
         return error("Error: The provided A1 range is not supported. ");
     }
-    if a1Range.startIndex != () {
-        filter = string `${filter}!${<string>a1Range.startIndex}`;
+    if startIndex != () {
+        filter = string `${filter}!${startIndex}`;
     }
-    if a1Range.endIndex != () {
-        filter = string `${filter}:${<string>a1Range.endIndex}`;
+    if endIndex != () {
+        filter = string `${filter}:${endIndex}`;
     }
     return filter;
 }

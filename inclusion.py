@@ -140,8 +140,6 @@ def remote_function_defn(function: RemoteFunction, var_name: str) -> List[str]:
     for comment in function[0]:
         content.append(indent_line(comment, 1))
     signature, fn_name, params = parse_remote_function_signature(function[1])
-    # FIXME: remove inner when we have removed confliciting names
-    # content.append(indent_line(signature.replace(fn_name, f'{fn_name}_inner') + "{", 1))
     content.append(indent_line(signature + " {", 1))
     args = [param[1] for param in params]
     call_tokens = [f'return self.{var_name}->{fn_name}(']
