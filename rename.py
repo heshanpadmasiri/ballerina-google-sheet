@@ -74,7 +74,7 @@ def file_content_with_new_types(
     body = []
     for line in lines:
         for old_name, new_name in type_name_list.items():
-            # space to make sure we don't raplace FooBar when we try to replace just Foo
+            # space to make sure we don't raplace FooBar when we try to replace just Bar
             # NOTE: this is not a perfect solution but it is sufficient to the
             # currently generated code
             # TODO: may be a good idea to use a regex here
@@ -119,8 +119,7 @@ def generic_new_name(old_name: str) -> str:
 
 def parse_line(line: str) -> ParseResult:
     tokens = line.strip().split()
-    if len(
-            tokens) > 3 and tokens[0] == "remote" and tokens[1] == "isolated" and tokens[2] == "function":
+    if tokens[:3] == ["remote", "isolated", "function"]:
         start_index = line.index(tokens[3])
         end_index = line.index("(", start_index)
         function_name = line[start_index:end_index]
@@ -149,8 +148,12 @@ def read_name_list(name_list_path: str) -> Tuple[NameList, NameList]:
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser(
         prog="rename", description="Rename generated client")
-    # TODO: optionally take a client path
-    # arg_parser.add_argument("client_path", help="Path to client.bal file")
+    arg_parser.add_argument(
+        "client_path",
+        help="Path to client.bal")
+    arg_parser.add_argument(
+        "types_path",
+        help="Path to types.bal")
     arg_parser.add_argument(
         "name_list_path",
         help="Path to hardcoded name list")
@@ -162,8 +165,8 @@ if __name__ == "__main__":
     args = arg_parser.parse_args()
     function_name_list, type_name_list = read_name_list(args.name_list_path)
     rename_client(
-        "client.bal",
-        "types.bal",
+        args.client_path,
+        args.types_path,
         function_name_list,
         type_name_list,
         args.inplace)

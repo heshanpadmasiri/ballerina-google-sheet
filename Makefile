@@ -3,6 +3,7 @@ BAL=bal
 API_SPEC=openapi.yaml
 NAME_LIST=name_list.txt
 CLIENT=client.bal
+TYPES=types.bal
 LIB=lib.bal
 INCLUSION=inclusion.py
 RENAME=rename.py

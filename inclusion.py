@@ -101,7 +101,6 @@ def new_lib_content(lines: List[str], remote_functions: List[RemoteFunction]) ->
             continue
         if macro[0] is not None:
             new_lines.append(line)
-            # TODO: generate the inclusion methods here
             for each in remote_functions:
                 new_lines.extend(remote_function_defn(each, macro[1]))
             tokenizer.advance()
@@ -298,7 +297,6 @@ def update_lib(lib_path: str, remote_functions: List[RemoteFunction], contentGen
         f.write("\n".join(content))
 
 if __name__ == "__main__":
-    # TODO: accept client path and lib path as arguments
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("client", help="Path to client.bal")
     arg_parser.add_argument("lib", help="Path to lib.bal")
