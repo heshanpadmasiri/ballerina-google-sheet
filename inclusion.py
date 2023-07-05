@@ -15,6 +15,7 @@ FunctionSignature = Tuple[str, str, List[Tuple[str, str]]]
 
 ContentGenFn = Callable[[List[str], List[RemoteFunction]], List[str]]
 
+
 class Tokenizer:
     def __init__(self, lines: List[str]) -> None:
         self.line_no = 0
@@ -22,9 +23,6 @@ class Tokenizer:
 
     def read_till_end_of_block(self) -> List[str]:
         """This will read lines until the end of the current block.
-
-        Assumptions:
-            Block ends at a clean new line (ie `...}\n`).
         """
         opening_brace_count, closing_brace_count = brace_count(
             self.current_line())
@@ -39,6 +37,9 @@ class Tokenizer:
             left_open += opening_brace_count - closing_brace_count
         if left_open > 0:
             raise RuntimeError("Block not closed")
+        last_line = lines.pop().rstrip()
+        end_index = last_line.rfind("}")
+        lines.append(last_line[:end_index+1])
         return lines
 
     def advance(self) -> None:
@@ -113,7 +114,7 @@ def new_lib_content(lines: List[str], remote_functions: List[RemoteFunction]) ->
     return new_lines
 
 
-def clean_lib_content(lines: List[str], _:List[RemoteFunction]) -> List[str]:
+def clean_lib_content(lines: List[str], _: List[RemoteFunction]) -> List[str]:
     tokenizer = Tokenizer(lines)
     new_lines: List[str] = []
     while not tokenizer.is_end():
@@ -151,8 +152,8 @@ def remote_function_defn(function: RemoteFunction, var_name: str) -> List[str]:
     return content
 
 
-def indent_line(line: str, indent: int) -> str:
-    return " " * (indent * 4) + line.strip()
+def indent_line(line: str, level: int, indent_size=4) -> str:
+    return " " * (level * indent_size) + line.strip()
 
 
 def parse_remote_function_signature(lines: List[str]) -> FunctionSignature:
@@ -272,6 +273,7 @@ def parse_client_class(tokenizer: Tokenizer, client_class_name: str) -> Tokenize
         tokens = tokenizer.current_line().strip().split()
     return Tokenizer(tokenizer.read_till_end_of_block())
 
+
 def main(client_path: str, lib_path: str, clean: bool):
     if clean:
         contentFn = clean_lib_content
@@ -280,6 +282,7 @@ def main(client_path: str, lib_path: str, clean: bool):
         contentFn = new_lib_content
         remote_functions = get_remote_functions(client_path)
     return update_lib(lib_path, remote_functions, contentFn)
+
 
 def get_remote_functions(client_path: str) -> List[RemoteFunction]:
     with open(client_path) as f:
@@ -296,6 +299,7 @@ def update_lib(lib_path: str, remote_functions: List[RemoteFunction], contentGen
     with open(lib_path, "w") as f:
         f.write("\n".join(content))
 
+
 if __name__ == "__main__":
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument("client", help="Path to client.bal")
@@ -304,4 +308,3 @@ if __name__ == "__main__":
         "--clean", action="store_true", help="Remove generated code")
     args = arg_parser.parse_args()
     main(args.client, args.lib, args.clean)
-
