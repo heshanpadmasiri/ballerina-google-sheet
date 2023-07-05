@@ -56,20 +56,21 @@ class Tokenizer:
                 if len(current_token_chars) != 0:
                     tokens.append(create_token(current_token_chars))
                 current_token_chars.clear()
-            if char == "(" and i < len(line) - 1 and line[i + 1] == ")":
+            elif char == "(" and i < len(line) - 1 and line[i + 1] == ")":
                 tokens.append("()")
                 i += 2
                 continue
-            if is_delimiter(char):
-                tokens.append(create_token(current_token_chars))
+            elif is_delimiter(char):
+                if len(current_token_chars) != 0:
+                    tokens.append(create_token(current_token_chars))
                 tokens.append(char)
                 current_token_chars.clear()
             else:
                 current_token_chars.append(char)
             i += 1
-            if i == len(line):
+            if i == len(line) and len(current_token_chars) != 0:
                 tokens.append(create_token(current_token_chars))
-        return list(filter(lambda x: x != "", map(lambda x: x.strip(), tokens)))
+        return tokens
 
     def is_end(self) -> bool:
         return self.line_no >= len(self.lines)
@@ -94,6 +95,14 @@ def brace_count(line: str) -> Tuple[int, int]:
 
 
 def new_lib_content(lines: List[str], remote_functions: List[RemoteFunction]) -> List[str]:
+    return lib_content(lines, remote_functions, False)
+
+
+def clean_lib_content(lines: List[str], _: List[RemoteFunction]) -> List[str]:
+    return lib_content(lines, [], True)
+
+
+def lib_content(lines: List[str], remote_functions: List[RemoteFunction], is_clean: bool) -> List[str]:
     tokenizer = Tokenizer(lines)
     new_lines: List[str] = []
     while not tokenizer.is_end():
@@ -105,32 +114,12 @@ def new_lib_content(lines: List[str], remote_functions: List[RemoteFunction]) ->
             continue
         if macro is not None and macro != "end":
             new_lines.append(line)
-            for each in remote_functions:
-                new_lines.extend(remote_function_defn(each, macro[1]))
-            tokenizer.advance()
+            if not is_clean:
+                for each in remote_functions:
+                    new_lines.extend(remote_function_defn(each, macro[1]))
+                tokenizer.advance()
             macro = try_parse_macro(tokenizer.tokenize())
             while macro != "end":
-                tokenizer.advance()
-                macro = try_parse_macro(tokenizer.tokenize())
-            new_lines.append(tokenizer.current_line())
-            tokenizer.advance()
-    return new_lines
-
-
-def clean_lib_content(lines: List[str], _: List[RemoteFunction]) -> List[str]:
-    tokenizer = Tokenizer(lines)
-    new_lines: List[str] = []
-    while not tokenizer.is_end():
-        line = tokenizer.current_line()
-        macro = try_parse_macro(tokenizer.tokenize())
-        if macro is None:
-            new_lines.append(line)
-            tokenizer.advance()
-            continue
-        if macro[0] is not None:
-            new_lines.append(line)
-            macro = try_parse_macro(tokenizer.tokenize())
-            while macro is None or macro[0] is not None:
                 tokenizer.advance()
                 macro = try_parse_macro(tokenizer.tokenize())
             new_lines.append(tokenizer.current_line())
@@ -163,7 +152,6 @@ def parse_remote_function_signature(lines: List[str]) -> FunctionSignature:
     tokenizer = Tokenizer(lines)
     signature_tokens = []
     param_types: List[Tuple[str, str]] = []
-    in_param_list = False
     function_name = ""
     while not tokenizer.is_end():
         tokens = tokenizer.tokenize()
@@ -173,34 +161,39 @@ def parse_remote_function_signature(lines: List[str]) -> FunctionSignature:
             if token == "{":
                 signature_line = to_line(signature_tokens)
                 return signature_line, function_name, param_types
-            if token == "function":
+            elif token == "function":
                 function_name = tokens[i + 1]
-            if in_param_list:
-                if token == ")":
-                    in_param_list = False
-                else:
-                    param_type = token
-                    param_name = tokens[i + 1]
-                    param_types.append((param_type, param_name))
-                    signature_tokens.append(param_type)
-                    signature_tokens.append(param_name)
-                    # advance till we see a comma or closing brace
-                    j = i + 2
-                    while j < len(tokens):
-                        signature_tokens.append(tokens[j])
-                        if tokens[j] == "," or tokens[j] == ")":
-                            if tokens[j] == ")":
-                                in_param_list = False
-                            break
-                        j += 1
-                    i = j + 1
-                    continue
-            if token == "(":
-                in_param_list = True
-            signature_tokens.append(token)
-            i += 1
+                signature_tokens.append(token)
+            elif token == "(":
+                signature_tokens.append(token)
+                param_types = parse_param_list(
+                    tokens[i + 1:], signature_tokens)
+            else:
+                signature_tokens.append(token)
+            i = len(signature_tokens)
         tokenizer.advance()
     raise RuntimeError("Failed to parse function signature")
+
+
+def parse_param_list(tokens: List[str], accum: List[str]) -> List[Tuple[str, str]]:
+    i = 0
+    param_types: List[Tuple[str, str]] = []
+    while i < len(tokens):
+        param_type = tokens[i]
+        param_name = tokens[i + 1]
+        accum.append(param_type)
+        accum.append(param_name)
+        param_types.append((param_type, param_name))
+        j = i + 2
+        while j < len(tokens):
+            if tokens[j] == ")":
+                return param_types
+            accum.append(tokens[j])
+            j += 1
+            if tokens[j-1] == ",":
+                break
+        i = j
+    raise RuntimeError("Failed to parse param list")
 
 
 def to_line(tokens: List[str]) -> str:
@@ -245,20 +238,25 @@ def parse_inclusion_macro(tokens: List[str]) -> InclusionMacro:
 
 
 def parse_remote_functions(tokenizer: Tokenizer) -> List[RemoteFunction]:
-    # Note: this expect tokenizer to be GsheetClient tokenizer
     remote_functions: List[RemoteFunction] = []
-    doc_comment: List[str] = []
     while not tokenizer.is_end():
-        while is_doc_comment(tokenizer.tokenize()):
-            doc_comment.append(tokenizer.current_line())
-            tokenizer.advance()
-        if not is_remote_func_start(tokenizer.tokenize()):
-            tokenizer.advance()
-            doc_comment = []
+        doc_comment = parse_doc_comment(tokenizer)
+        if doc_comment is None:
             continue
         code = tokenizer.read_till_end_of_block()
         remote_functions.append((doc_comment, code))
     return remote_functions
+
+
+def parse_doc_comment(tokenizer: Tokenizer) -> Optional[List[str]]:
+    doc_comment: List[str] = []
+    while is_doc_comment(tokenizer.tokenize()):
+        doc_comment.append(tokenizer.current_line())
+        tokenizer.advance()
+    if not is_remote_func_start(tokenizer.tokenize()):
+        tokenizer.advance()
+        return None
+    return doc_comment
 
 
 def is_remote_func_start(tokens: List[str]) -> bool:
@@ -278,16 +276,6 @@ def parse_client_class(tokenizer: Tokenizer, client_class_name: str) -> Tokenize
     return Tokenizer(tokenizer.read_till_end_of_block())
 
 
-def main(client_path: str, lib_path: str, clean: bool):
-    if clean:
-        contentFn = clean_lib_content
-        remote_functions = []
-    else:
-        contentFn = new_lib_content
-        remote_functions = get_remote_functions(client_path)
-    return update_lib(lib_path, remote_functions, contentFn)
-
-
 def get_remote_functions(client_path: str) -> List[RemoteFunction]:
     with open(client_path) as f:
         lines = list(map(lambda line: line.rstrip(), f.readlines()))
@@ -302,6 +290,16 @@ def update_lib(lib_path: str, remote_functions: List[RemoteFunction], contentGen
     content = contentGen(lines, remote_functions)
     with open(lib_path, "w") as f:
         f.write("\n".join(content))
+
+
+def main(client_path: str, lib_path: str, clean: bool):
+    if clean:
+        contentFn = clean_lib_content
+        remote_functions = []
+    else:
+        contentFn = new_lib_content
+        remote_functions = get_remote_functions(client_path)
+    return update_lib(lib_path, remote_functions, contentFn)
 
 
 if __name__ == "__main__":
