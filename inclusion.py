@@ -1,14 +1,11 @@
 import argparse
-import re
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, List, Optional, Tuple, Union, Literal
 
 # doc comment, code
 RemoteFunction = Tuple[List[str], List[str]]
 # Client class name, variable name
 InclusionMacro = Tuple[str, str]
-# "end"
-EndMacro = Tuple[None]
-Macro = Union[InclusionMacro, EndMacro]
+Macro = Union[InclusionMacro, Literal["end"]]
 
 # signature line (excluding "{"), function_name, [(param type, param name)]
 FunctionSignature = Tuple[str, str, List[Tuple[str, str]]]
@@ -51,25 +48,27 @@ class Tokenizer:
     def tokenize(self) -> List[str]:
         line = self.current_line()
         tokens = []
-        current_token = ""
+        current_token_chars = []
         i = 0
         while i < len(line):
             char = line[i]
             if char == " ":
-                if current_token != "":
-                    tokens.append(current_token)
-                current_token = ""
+                if len(current_token_chars) != 0:
+                    tokens.append(create_token(current_token_chars))
+                current_token_chars.clear()
             if char == "(" and i < len(line) - 1 and line[i + 1] == ")":
                 tokens.append("()")
                 i += 2
                 continue
             if is_delimiter(char):
-                tokens.append(current_token)
+                tokens.append(create_token(current_token_chars))
                 tokens.append(char)
-                current_token = ""
+                current_token_chars.clear()
             else:
-                current_token += char
+                current_token_chars.append(char)
             i += 1
+            if i == len(line):
+                tokens.append(create_token(current_token_chars))
         return list(filter(lambda x: x != "", map(lambda x: x.strip(), tokens)))
 
     def is_end(self) -> bool:
@@ -78,6 +77,10 @@ class Tokenizer:
     def print_lines(self) -> None:
         for line in self.lines:
             print(line)
+
+
+def create_token(chars: List[str]) -> str:
+    return "".join(chars)
 
 
 def is_delimiter(char: str) -> bool:
@@ -95,20 +98,20 @@ def new_lib_content(lines: List[str], remote_functions: List[RemoteFunction]) ->
     new_lines: List[str] = []
     while not tokenizer.is_end():
         line = tokenizer.current_line()
-        macro = try_parse_macro(line)
+        macro = try_parse_macro(tokenizer.tokenize())
         if macro is None:
             new_lines.append(line)
             tokenizer.advance()
             continue
-        if macro[0] is not None:
+        if macro is not None and macro != "end":
             new_lines.append(line)
             for each in remote_functions:
                 new_lines.extend(remote_function_defn(each, macro[1]))
             tokenizer.advance()
-            macro = try_parse_macro(tokenizer.current_line())
-            while macro is None or macro[0] is not None:
+            macro = try_parse_macro(tokenizer.tokenize())
+            while macro != "end":
                 tokenizer.advance()
-                macro = try_parse_macro(tokenizer.current_line())
+                macro = try_parse_macro(tokenizer.tokenize())
             new_lines.append(tokenizer.current_line())
             tokenizer.advance()
     return new_lines
@@ -119,17 +122,17 @@ def clean_lib_content(lines: List[str], _: List[RemoteFunction]) -> List[str]:
     new_lines: List[str] = []
     while not tokenizer.is_end():
         line = tokenizer.current_line()
-        macro = try_parse_macro(line)
+        macro = try_parse_macro(tokenizer.tokenize())
         if macro is None:
             new_lines.append(line)
             tokenizer.advance()
             continue
         if macro[0] is not None:
             new_lines.append(line)
-            macro = try_parse_macro(tokenizer.current_line())
+            macro = try_parse_macro(tokenizer.tokenize())
             while macro is None or macro[0] is not None:
                 tokenizer.advance()
-                macro = try_parse_macro(tokenizer.current_line())
+                macro = try_parse_macro(tokenizer.tokenize())
             new_lines.append(tokenizer.current_line())
             tokenizer.advance()
     return new_lines
@@ -224,20 +227,21 @@ def space_before(token: str) -> bool:
     return token not in chars
 
 
-def try_parse_macro(line: str) -> Optional[Macro]:
-    line = line.strip()
-    if "includeClient!" in line:
-        return parse_inclusion_macro(line)
-    elif "end!" in line:
-        return None,
+def try_parse_macro(tokens: List[str]) -> Optional[Macro]:
+    if len(tokens) < 2 or tokens[0] != "//":
+        return None
+    keyword = tokens[1]
+    if keyword == "includeClient!":
+        return parse_inclusion_macro(tokens)
+    elif keyword == "end!":
+        return "end"
     return None
 
 
-def parse_inclusion_macro(line: str) -> InclusionMacro:
-    m = re.search(r"includeClient!\((\S*)\s*,\s*(\S*)\)", line)
-    if m:
-        return m.group(1), m.group(2)
-    raise RuntimeError(f"Invalid inclusion macro: {line}")
+def parse_inclusion_macro(tokens: List[str]) -> InclusionMacro:
+    if len(tokens) == 7:
+        return tokens[3], tokens[5]
+    raise RuntimeError(f"Invalid inclusion macro: {to_line(tokens)}")
 
 
 def parse_remote_functions(tokenizer: Tokenizer) -> List[RemoteFunction]:
@@ -245,10 +249,10 @@ def parse_remote_functions(tokenizer: Tokenizer) -> List[RemoteFunction]:
     remote_functions: List[RemoteFunction] = []
     doc_comment: List[str] = []
     while not tokenizer.is_end():
-        while is_doc_comment(tokenizer.current_line()):
+        while is_doc_comment(tokenizer.tokenize()):
             doc_comment.append(tokenizer.current_line())
             tokenizer.advance()
-        if not is_remote_func_start(tokenizer.current_line()):
+        if not is_remote_func_start(tokenizer.tokenize()):
             tokenizer.advance()
             doc_comment = []
             continue
@@ -257,20 +261,20 @@ def parse_remote_functions(tokenizer: Tokenizer) -> List[RemoteFunction]:
     return remote_functions
 
 
-def is_remote_func_start(line: str) -> bool:
-    return line.strip().startswith("remote isolated function")
+def is_remote_func_start(tokens: List[str]) -> bool:
+    return len(tokens) > 0 and tokens[0] == "remote"
 
 
-def is_doc_comment(line: str) -> bool:
-    return line.strip().startswith("#")
+def is_doc_comment(tokens: List[str]) -> bool:
+    return len(tokens) > 0 and tokens[0] == "#"
 
 
 def parse_client_class(tokenizer: Tokenizer, client_class_name: str) -> Tokenizer:
-    tokens = tokenizer.current_line().strip().split()
+    tokens = tokenizer.tokenize()
     expected_tokens = ["isolated", "client", "class", client_class_name, "{"]
     while tokens != expected_tokens:
         tokenizer.advance()
-        tokens = tokenizer.current_line().strip().split()
+        tokens = tokenizer.tokenize()
     return Tokenizer(tokenizer.read_till_end_of_block())
 
 
