@@ -114,7 +114,7 @@ def parse_line(line: str) -> ParseResult:
     return None
 
 
-def read_name_list(name_list_path: str) -> Tuple[NameList, NameList, NameList]:
+def read_name_list(name_list_path: str) -> Tuple[NameList, NameList]:
     function_name_list = {}
     regex_name_list = {}
     name_list = function_name_list
