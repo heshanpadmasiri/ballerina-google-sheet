@@ -14,11 +14,14 @@ def rename_client(
         types_path: str,
         function_name_list: NameList,
         type_name_list: NameList,
+        comment_name_list: NameList,
         inplace: bool) -> None:
     fix_generated_client_name(client_path, inplace)
     rename_functions(client_path, function_name_list, inplace)
-    rename_types(client_path, type_name_list, inplace)
-    rename_types(types_path, type_name_list, inplace)
+    rename_file_content(client_path, type_name_list, inplace)
+    rename_file_content(types_path, type_name_list, inplace)
+    rename_file_content(client_path, comment_name_list, inplace)
+    rename_file_content(types_path, comment_name_list, inplace)
 
 
 def fix_generated_client_name(client_path: str, inplace: bool) -> None:
@@ -100,22 +103,22 @@ def rename_functions(
         file.writelines(body)
 
 
-def rename_types(
+def rename_file_content(
         file_path: str,
-        type_name_list: NameList,
+        name_list: NameList,
         inplace: bool) -> None:
     body = []
     with open(file_path, "r") as file:
         lines = file.readlines()
-        body = file_content_with_new_types(lines, type_name_list)
+        body = file_content_with_new_names(lines, name_list)
     new_file_path = file_path if inplace else "new_" + file_path
     with open(new_file_path, "w") as file:
         file.writelines(body)
 
 
-def file_content_with_new_types(
+def file_content_with_new_names(
         lines: List[str],
-        type_name_list: NameList) -> List[str]:
+        name_list: NameList) -> List[str]:
     body = []
     with open(file_path, "r") as file:
         lines = file.readlines()
@@ -184,9 +187,10 @@ def parse_line(line: str) -> ParseResult:
     return None
 
 
-def read_name_list(name_list_path: str) -> Tuple[NameList, NameList]:
+def read_name_list(name_list_path: str) -> Tuple[NameList, NameList, NameList]:
     function_name_list = {}
     type_name_list = {}
+    comment_name_list = {}
     name_list = function_name_list
     with open(name_list_path, "r") as f:
         for line in f.readlines():
@@ -195,11 +199,13 @@ def read_name_list(name_list_path: str) -> Tuple[NameList, NameList]:
                 name_list = function_name_list
             elif line == "# types":
                 name_list = type_name_list
+            elif line == "# comments":
+                name_list = type_name_list
             if len(line) == 0 or line[0] == "#":
                 continue
             org_name, new_name = line.split()
             name_list[org_name] = new_name
-    return function_name_list, type_name_list
+    return function_name_list, type_name_list, comment_name_list
 
 
 if __name__ == "__main__":
@@ -220,10 +226,11 @@ if __name__ == "__main__":
         action="store_true",
         default=False)
     args = arg_parser.parse_args()
-    function_name_list, type_name_list = read_name_list(args.name_list_path)
+    function_name_list, type_name_list, comment_name_list = read_name_list(args.name_list_path)
     rename_client(
         args.client_path,
         args.types_path,
         function_name_list,
         type_name_list,
+        comment_name_list,
         args.inplace)
