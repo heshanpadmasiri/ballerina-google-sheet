@@ -16,8 +16,6 @@ sheetsSpreadsheetsDevelopermetadataGet getDeveloperMetadata
 sheetsSpreadsheetsDevelopermetadataSearch searchForDeveloperMetadata
 sheetsSpreadsheetsGetbydatafilter getSpreadsheetByDataFilter
 
-# types
-ValueRange DataRange
-
-# comments
-`rgba()` rgba
+# regex
+\bValueRange DataRange
+`rgba\(\)` rgba # we have `rgba()` in comments that is causing warnings for undocumented function
