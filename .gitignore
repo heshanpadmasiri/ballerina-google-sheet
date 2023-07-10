@@ -1,3 +1,7 @@
 target
 generated
 Config.toml
+*.stamp
+.env
+__pycache__
+*.json
