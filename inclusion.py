@@ -1,12 +1,14 @@
 import argparse
-from typing import List, Callable
+from typing import List, Callable, Optional
 from parser import (
     Tokenizer,
     RemoteFunction,
+    is_class_start,
     try_parse_macro,
     parse_remote_function_signature,
-    get_remote_functions,
     indent_line,
+    is_doc_comment,
+    is_remote_func_start,
 )
 
 ContentGenFn = Callable[[List[str], List[RemoteFunction]], List[str]]
@@ -82,6 +84,41 @@ def update_lib(
     content = contentGen(lines, remote_functions)
     with open(lib_path, "w") as f:
         f.write("\n".join(content))
+
+
+def get_remote_functions(client_path: str) -> List[RemoteFunction]:
+    with open(client_path) as f:
+        tokenizer = Tokenizer(f.readlines())
+    tokenizer = parse_client_class(tokenizer, "GsheetClient")
+    return parse_remote_functions(tokenizer)
+
+
+def parse_client_class(tokenizer: Tokenizer, client_class_name: str) -> Tokenizer:
+    while not is_class_start(tokenizer, client_class_name):
+        tokenizer.advance()
+    return Tokenizer(tokenizer.read_till_end_of_block())
+
+
+def parse_remote_functions(tokenizer: Tokenizer) -> List[RemoteFunction]:
+    remote_functions: List[RemoteFunction] = []
+    while not tokenizer.is_end():
+        doc_comment = parse_doc_comment(tokenizer)
+        if doc_comment is None:
+            continue
+        code = tokenizer.read_till_end_of_block()
+        remote_functions.append((doc_comment, code))
+    return remote_functions
+
+
+def parse_doc_comment(tokenizer: Tokenizer) -> Optional[List[str]]:
+    doc_comment: List[str] = []
+    while is_doc_comment(tokenizer):
+        doc_comment.append(tokenizer.current_line())
+        tokenizer.advance()
+    if not is_remote_func_start(tokenizer):
+        tokenizer.advance()
+        return None
+    return doc_comment
 
 
 def main(client_path: str, lib_path: str, clean: bool):

@@ -1,4 +1,4 @@
-from typing import Callable, List, Optional, Tuple, Union, Literal
+from typing import List, Optional, Tuple, Union, Literal
 
 # doc comment, code
 RemoteFunction = Tuple[List[str], List[str]]
@@ -41,7 +41,7 @@ class Tokenizer:
 
     def tokenize(self) -> List[str]:
         # TODO: cache this and clear that when we advance
-        line = self.current_line()
+        line = self.current_line().strip()
         tokens = []
         current_token_chars = []
         i = 0
@@ -188,7 +188,13 @@ def is_remote_func_start(tokenizer: Tokenizer) -> bool:
     return len(tokens) > 0 and tokens[0] == "remote"
 
 
-def is_doc_comment(tokens: List[str]) -> bool:
+def is_class_start(tokenizer: Tokenizer, class_name: str) -> bool:
+    tokens = tokenizer.tokenize()
+    return "class" in tokens and class_name in tokens
+
+
+def is_doc_comment(tokenizer: Tokenizer) -> bool:
+    tokens = tokenizer.tokenize()
     return len(tokens) > 0 and tokens[0] == "#"
 
 
