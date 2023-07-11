@@ -2,6 +2,13 @@ import argparse
 import re
 from typing import Dict, Optional, Tuple, List
 
+from parser import (
+    Tokenizer,
+    indent_line,
+    is_remote_func_start,
+    parse_remote_function_signature,
+)
+
 NameList = Dict[str, str]
 
 LinePosition = Tuple[int, int]  # start_col, end_col
@@ -24,6 +31,7 @@ def rename_client(
 
 
 def fix_generated_client_name(client_path: str, inplace: bool) -> None:
+    # FIXME: use tokenizer
     body = []
     with open(client_path, "r") as file:
         lines = file.readlines()
@@ -71,20 +79,20 @@ def file_content_with_new_names(lines: List[str], name_list: NameList) -> List[s
 
 def new_client_content(lines: List[str], name_list: NameList) -> List[str]:
     new_client_body = []
-    for line in lines:
-        parse_result = parse_line(line)
-        if parse_result is not None:
-            function_name_position, function_name = parse_result
+    tokenizer = Tokenizer(lines)
+    while not tokenizer.is_end():
+        if is_remote_func_start(tokenizer):
+            line, function_name, _ = parse_remote_function_signature(tokenizer)
             new_function_name = name_list.get(
                 function_name, generic_new_name(function_name)
             )
-            new_client_body.append(
-                line[: function_name_position[0]]
-                + new_function_name
-                + line[function_name_position[1] :]
+            new_line = (
+                indent_line(line.replace(function_name, new_function_name), 1) + " {\n"
             )
+            new_client_body.append(new_line)
         else:
-            new_client_body.append(line)
+            new_client_body.append(tokenizer.current_line())
+        tokenizer.advance()
     return new_client_body
 
 
