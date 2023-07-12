@@ -4,8 +4,9 @@ from typing import Callable, List, Optional, Tuple, Union, Literal
 # doc comment, code
 RemoteFunction = Tuple[List[str], List[str]]
 # Client class name, variable name
-InclusionMacro = Tuple[str, str]
-Macro = Union[InclusionMacro, Literal["end"]]
+IncludeRemoteFnMacro = Tuple[str, str]
+TypeInclusionMacro = Tuple[Literal["type inclusion"], str]
+Macro = Union[IncludeRemoteFnMacro, TypeInclusionMacro, Literal["end"]]
 
 # signature line (excluding "{"), function_name, [(param type, param name)]
 FunctionSignature = Tuple[str, str, List[Tuple[str, str]]]
@@ -19,24 +20,21 @@ class Tokenizer:
         self.lines = lines
 
     def read_till_end_of_block(self) -> List[str]:
-        """This will read lines until the end of the current block.
-        """
-        opening_brace_count, closing_brace_count = brace_count(
-            self.current_line())
+        """This will read lines until the end of the current block."""
+        opening_brace_count, closing_brace_count = brace_count(self.current_line())
         left_open = opening_brace_count - closing_brace_count
         # Block could open and close in the same line
         lines = [self.current_line()]
         while left_open > 0 and not self.is_end():
             self.advance()
             lines.append(self.current_line())
-            opening_brace_count, closing_brace_count = brace_count(
-                self.current_line())
+            opening_brace_count, closing_brace_count = brace_count(self.current_line())
             left_open += opening_brace_count - closing_brace_count
         if left_open > 0:
             raise RuntimeError("Block not closed")
         last_line = lines.pop().rstrip()
         end_index = last_line.rfind("}")
-        lines.append(last_line[:end_index+1])
+        lines.append(last_line[: end_index + 1])
         return lines
 
     def advance(self) -> None:
@@ -94,7 +92,9 @@ def brace_count(line: str) -> Tuple[int, int]:
     return line.count("{"), line.count("}")
 
 
-def new_lib_content(lines: List[str], remote_functions: List[RemoteFunction]) -> List[str]:
+def new_lib_content(
+    lines: List[str], remote_functions: List[RemoteFunction]
+) -> List[str]:
     return lib_content(lines, remote_functions, False)
 
 
@@ -102,7 +102,9 @@ def clean_lib_content(lines: List[str], _: List[RemoteFunction]) -> List[str]:
     return lib_content(lines, [], True)
 
 
-def lib_content(lines: List[str], remote_functions: List[RemoteFunction], is_clean: bool) -> List[str]:
+def lib_content(
+    lines: List[str], remote_functions: List[RemoteFunction], is_clean: bool
+) -> List[str]:
     tokenizer = Tokenizer(lines)
     new_lines: List[str] = []
     while not tokenizer.is_end():
@@ -112,7 +114,15 @@ def lib_content(lines: List[str], remote_functions: List[RemoteFunction], is_cle
             new_lines.append(line)
             tokenizer.advance()
             continue
-        if macro is not None and macro != "end":
+        elif macro[0] == "type inclusion":
+            new_lines.append(line)
+            if not is_clean:
+                new_lines.append(indent_line(f"*{macro[1]};\n", 1))
+            while try_parse_macro(tokenizer.tokenize()) != "end":
+                tokenizer.advance()
+            new_lines.append(tokenizer.current_line())
+            tokenizer.advance()
+        else:
             new_lines.append(line)
             if not is_clean:
                 for each in remote_functions:
@@ -134,12 +144,12 @@ def remote_function_defn(function: RemoteFunction, var_name: str) -> List[str]:
     signature, fn_name, params = parse_remote_function_signature(function[1])
     content.append(indent_line(signature + " {", 1))
     args = [param[1] for param in params]
-    call_tokens = [f'return self.{var_name}->{fn_name}(']
+    call_tokens = [f"return self.{var_name}->{fn_name}("]
     for i, arg in enumerate(args):
         if i > 0:
             call_tokens.append(", ")
         call_tokens.append(arg)
-    content.append(indent_line("".join(call_tokens)+");", 2))
+    content.append(indent_line("".join(call_tokens) + ");", 2))
     content.append(indent_line("}\n", 1))
     return content
 
@@ -166,8 +176,7 @@ def parse_remote_function_signature(lines: List[str]) -> FunctionSignature:
                 signature_tokens.append(token)
             elif token == "(":
                 signature_tokens.append(token)
-                param_types = parse_param_list(
-                    tokens[i + 1:], signature_tokens)
+                param_types = parse_param_list(tokens[i + 1 :], signature_tokens)
             else:
                 signature_tokens.append(token)
             i = len(signature_tokens)
@@ -190,7 +199,7 @@ def parse_param_list(tokens: List[str], accum: List[str]) -> List[Tuple[str, str
                 return param_types
             accum.append(tokens[j])
             j += 1
-            if tokens[j-1] == ",":
+            if tokens[j - 1] == ",":
                 break
         i = j
     raise RuntimeError("Failed to parse param list")
@@ -220,21 +229,32 @@ def space_before(token: str) -> bool:
     return token not in chars
 
 
+INCLUDE_REMOTE_FN_MACRO = "includeRemoteFunctions!"
+TYPE_INCLUSION_MACRO = "typeInclusion!"
+END_MACRO = "end!"
+
+
 def try_parse_macro(tokens: List[str]) -> Optional[Macro]:
     if len(tokens) < 2 or tokens[0] != "//":
         return None
-    keyword = tokens[1]
-    if keyword == "includeClient!":
-        return parse_inclusion_macro(tokens)
-    elif keyword == "end!":
+    macro = tokens[1]
+    if macro == INCLUDE_REMOTE_FN_MACRO:
+        return parse_include_remote_fn_macro(tokens)
+    elif macro == TYPE_INCLUSION_MACRO:
+        return parse_type_inclusion_macro(tokens)
+    elif macro == END_MACRO:
         return "end"
     return None
 
 
-def parse_inclusion_macro(tokens: List[str]) -> InclusionMacro:
+def parse_include_remote_fn_macro(tokens: List[str]) -> IncludeRemoteFnMacro:
     if len(tokens) == 7:
         return tokens[3], tokens[5]
     raise RuntimeError(f"Invalid inclusion macro: {to_line(tokens)}")
+
+
+def parse_type_inclusion_macro(tokens: List[str]) -> TypeInclusionMacro:
+    return "type inclusion", tokens[3]
 
 
 def parse_remote_functions(tokenizer: Tokenizer) -> List[RemoteFunction]:
@@ -284,7 +304,9 @@ def get_remote_functions(client_path: str) -> List[RemoteFunction]:
     return parse_remote_functions(tokenizer)
 
 
-def update_lib(lib_path: str, remote_functions: List[RemoteFunction], contentGen: ContentGenFn):
+def update_lib(
+    lib_path: str, remote_functions: List[RemoteFunction], contentGen: ContentGenFn
+):
     with open(lib_path) as f:
         lines = list(map(lambda line: line.rstrip(), f.readlines()))
     content = contentGen(lines, remote_functions)
@@ -307,6 +329,7 @@ if __name__ == "__main__":
     arg_parser.add_argument("client", help="Path to client.bal")
     arg_parser.add_argument("lib", help="Path to lib.bal")
     arg_parser.add_argument(
-        "--clean", action="store_true", help="Remove generated code")
+        "--clean", action="store_true", help="Remove generated code"
+    )
     args = arg_parser.parse_args()
     main(args.client, args.lib, args.clean)

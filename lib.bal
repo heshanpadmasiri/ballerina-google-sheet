@@ -152,7 +152,9 @@ public enum LocationMatchingStrategy {
 };
 
 public isolated client class Client {
+    // typeInclusion!(GsheetClient)
     *GsheetClient;
+    // end!
     private final GsheetClient gClient;
     private final drive:Client driveEp;
     final http:Client clientEp;
@@ -681,7 +683,7 @@ public isolated client class Client {
         BatchUpdateSpreadsheetResponse _ = check self.gClient->batchUpdate(spreadsheetId, {requests});
     }
 
-    // includeClient!(GsheetClient, gClient)
+    // includeRemoteFunctions!(GsheetClient, gClient)
     # Creates a spreadsheet, returning the newly created spreadsheet.
     #
     # + xgafv - V1 error format.
