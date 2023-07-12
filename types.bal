@@ -2709,7 +2709,7 @@ public type Response record {
 
 # Updates a slicer's specifications. (This does not move or resize a slicer. To move or resize a slicer use UpdateEmbeddedObjectPositionRequest.
 public type UpdateSlicerSpecRequest record {
-    # The fields that should be updated. At least one field must be specified. The root `SlicerSpec` is implied and should not be specified. A single "*"` can be used as short-hand for listing every field.
+    # The fields that should be updated. At least one field must be specified. The root `SlicerSpec` is implied and should not be specified. A single `"*"` can be used as short-hand for listing every field.
     string fields?;
     # The id of the slicer to update.
     int:Signed32 slicerId?;
