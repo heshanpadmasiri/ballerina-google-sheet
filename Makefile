@@ -6,7 +6,7 @@
 
 BAL?=bal
 TARGETS=all clean test
-SUBDIRS=client.d
+SUBDIRS=client.d samples.d
 
 # This needs to control the order in which we build the JARS
 all:

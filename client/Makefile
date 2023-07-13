@@ -17,10 +17,10 @@ all: $(RENAME_STAMP) $(INCLUSION_STAMP)
 	$(BAL) build --target-dir ../build/gsheet
 
 pack: $(PACK)
-	$(BAL) push $(PACK) --repository=local
 
 $(PACK): $(INCLUSION_STAMP) $(RENAME_STAMP)
 	$(BAL) pack --target-dir ../build/pack
+	$(BAL) push $(PACK) --repository=local
 
 test: $(RENAME_STAMP) $(GENERATED_FILES) $(INCLUSION_STAMP)
 	$(BAL) test
