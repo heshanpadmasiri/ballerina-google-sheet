@@ -1,37 +1,24 @@
-PYTHON=python3
-BAL=bal
-API_SPEC=openapi.yaml
-NAME_LIST=name_list.txt
-CLIENT=client.bal
-TYPES=types.bal
-LIB=lib.bal
-INCLUSION=inclusion.py
-RENAME=rename.py
-GENERATED_FILES=$(CLIENT) $(TYPES) utils.bal
-RENAME_STAMP=rename.stamp
-INCLUSION_STAMP=inclusion.stamp
+##
+# Ballerina Google Sheet client
+#
+# @file
+# @version 0.1
 
-all: $(RENAME_STAMP) $(INCLUSION_STAMP)
-	$(BAL) build
+BAL?=bal
+TARGETS=all clean test
+SUBDIRS=client.d
 
-test: $(RENAME_STAMP) $(GENERATED_FILES) $(INCLUSION_STAMP)
-	$(BAL) test
+# This needs to control the order in which we build the JARS
+all:
+	$(MAKE) target=all client.d
 
-$(INCLUSION_STAMP): $(GENERATED_FILES) $(INCLUSION)
-	$(PYTHON) $(INCLUSION) $(CLIENT) $(LIB)
-	touch $@
+test clean:
+	$(MAKE) target=$@ $(SUBDIRS)
 
-$(RENAME_STAMP): $(GENERATED_FILES) $(RENAME)
-	$(PYTHON) $(RENAME) --inplace $(CLIENT) $(TYPES) $(NAME_LIST)
-	touch $@
+test: all
 
-$(GENERATED_FILES): $(API_SPEC)
-	rm -rf $(GENERATED_FILES)
-	$(BAL) openapi -i openapi.yaml --mode=client --client-methods=remote
+$(SUBDIRS):
+	$(MAKE) -C $(basename $@) $(target)
 
-clean:
-	$(PYTHON) $(INCLUSION) --clean $(CLIENT) $(LIB)
-	rm -f $(GENERATED_FILES)
-	$(BAL) clean
-
-.PHONY: clean all test
+.PHONY: $(TARGETS) $(SUBDIRS)
+# end
